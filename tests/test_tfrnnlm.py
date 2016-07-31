@@ -1,6 +1,7 @@
 from unittest import TestCase
 
-from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization
+import numpy as np
+from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches
 
 
 class TestTokenization(TestCase):
@@ -26,3 +27,24 @@ class TestIndexing(TestCase):
         v = IndexedVocabulary("hamlet hamlet hamlet to be or not to be".split(), max_vocabulary=2, min_frequency=2)
         self.assertEqual(set(v.type_to_index.keys()), {"be", "hamlet"})
         self.assertEqual(len(v), 3)
+
+
+class TestBatching(TestCase):
+    def test_language_model_batches(self):
+        batched_input, batched_targets = language_model_batches([79, 90, 136, 33, 5, 137], 3)
+        np.testing.assert_equal(batched_input, np.array([
+            [79, 90, 136],
+            [90, 136, 33],
+            [136, 33, 5],
+            [33, 5, 137],
+            [5, 137, 0],
+            [137, 0, 0]
+        ]))
+        np.testing.assert_equal(batched_targets, np.array([
+            [90, 136, 33],
+            [136, 33, 5],
+            [33, 5, 137],
+            [5, 137, 0],
+            [137, 0, 0],
+            [0, 0, 0]
+        ]))

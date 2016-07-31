@@ -1,6 +1,5 @@
-from setuptools import setup
-
 import tfrnnlm
+from setuptools import setup
 
 setup(
     name="tfrnnlm",
@@ -13,5 +12,6 @@ setup(
     description="Example TensorFlow RNN Language Model",
     entry_points={
         "console_scripts": ["tfrnnlm=tfrnnlm.main:main"],
-    }
+    },
+    install_requires=["tensorflow"]
 )
