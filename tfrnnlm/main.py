@@ -1,6 +1,7 @@
 import argparse
 
 from tfrnnlm import configure_logger, __version__
+from tfrnnlm.train import train_model
 
 
 def main():
@@ -23,21 +24,13 @@ def main():
     train.add_argument("--training-epochs", type=int, default=6, help="number of training epochs to run")
     train.add_argument("--learning-rate", type=float, default=1.0, help="training learning rate")
     train.add_argument("--init", type=float, default=0.05, help="random initial absolute value range")
-    train.set_defaults(func=train_command)
+    train.set_defaults(func=train_model)
 
     sample = subparsers.add_parser("sample", description="Sample text from a RNN model.", parents=[shared],
                                    help="sample text from language model")
     sample.add_argument("model", help="directory from which to read the model")
-    sample.set_defaults(func=sample_command)
+    sample.set_defaults(func=lambda a: print(a))
 
     args = parser.parse_args()
     configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
     args.func(args)
-
-
-def train_command(args):
-    print(args)
-
-
-def sample_command(args):
-    print(args)
