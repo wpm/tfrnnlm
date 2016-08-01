@@ -23,9 +23,8 @@ class RNN(object):
             if keep < 1:
                 cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=keep)
             rnn_layers = tf.nn.rnn_cell.MultiRNNCell([cell] * layers)
-            # TODO Why doesn't rnn_layers work here?
-            self.outputs, _ = tf.nn.dynamic_rnn(cell, self.embedded_input, time_major=True,
-                                                initial_state=cell.zero_state(batch_size, dtype=tf.float32))
+            self.outputs, _ = tf.nn.dynamic_rnn(rnn_layers, self.embedded_input, time_major=True,
+                                                initial_state=rnn_layers.zero_state(batch_size, dtype=tf.float32))
 
         with tf.name_scope("Cost"):
             # Concatenate all the batches into a single row.
