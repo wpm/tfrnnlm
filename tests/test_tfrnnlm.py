@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import numpy as np
-from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches
+from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches, batches
 
 
 class TestTokenization(TestCase):
@@ -48,3 +48,12 @@ class TestBatching(TestCase):
             [137, 0, 0],
             [0, 0, 0]
         ]))
+
+
+class TestBatches(TestCase):
+    def test_batches(self):
+        data = range(10)
+        for contexts, targets in batches(data, 3, 4):
+            print(contexts)
+            print(targets)
+            print("\n")

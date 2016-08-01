@@ -115,3 +115,37 @@ def language_model_batches(data, batch_size):
     batched_targets = np.roll(batched_input, -1, axis=0)
     batched_targets[-1] = 0
     return batched_input, batched_targets
+
+
+def batches(data, time_steps, batch_size):
+    total_time = len(data)
+
+    def unrolled_sequence_pairs():
+        def unrolled_sequences():
+            for i in range(total_time):
+                batch = data[i:i + time_steps]
+                batch = np.pad(batch, (0, time_steps - len(batch)), mode="constant")
+                yield batch
+
+        prev = None
+        for unrolled_sequence in unrolled_sequences():
+            if prev is not None:
+                yield prev, unrolled_sequence
+            prev = unrolled_sequence
+        pad = np.zeros(time_steps, dtype=int)
+        yield prev, pad
+        extra = total_time % batch_size
+        for _ in range(extra):
+            yield pad, pad
+
+    contexts = []
+    targets = []
+    for context, target in unrolled_sequence_pairs():
+        contexts += [context]
+        targets += [target]
+        if len(contexts) == batch_size:
+            contexts = np.concatenate(contexts).reshape(-1, time_steps)
+            targets = np.concatenate(targets).reshape(-1, time_steps)
+            yield contexts, targets
+            contexts = []
+            targets = []
