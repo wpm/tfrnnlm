@@ -53,8 +53,8 @@ class RNN(object):
 
     def train_model(self, session, batched_input, batched_targets, training_epochs, summary_directory):
         train_summary = summary_writer(summary_directory, session.graph)
+        session.run(self.initialize)
         for j in range(training_epochs):
-            session.run(self.initialize)
             _, c, s, i = session.run([self.train, self.cost, self.summary, self.iteration],
                                      feed_dict={self.input: batched_input, self.targets: batched_targets})
             logger.info("Iteration %d, cost %0.4f" % (i, c))
