@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import numpy as np
-from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches_old, language_model_batches
+from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches
 
 
 class TestTokenization(TestCase):
@@ -29,30 +29,9 @@ class TestIndexing(TestCase):
         self.assertEqual(len(v), 3)
 
 
-class TestBatching(TestCase):
-    def test_language_model_batches(self):
-        batched_input, batched_targets = language_model_batches_old([79, 90, 136, 33, 5, 137], 3)
-        np.testing.assert_equal(batched_input, np.array([
-            [79, 90, 136],
-            [90, 136, 33],
-            [136, 33, 5],
-            [33, 5, 137],
-            [5, 137, 0],
-            [137, 0, 0]
-        ]))
-        np.testing.assert_equal(batched_targets, np.array([
-            [90, 136, 33],
-            [136, 33, 5],
-            [33, 5, 137],
-            [5, 137, 0],
-            [137, 0, 0],
-            [0, 0, 0]
-        ]))
-
-
 class TestBatches(TestCase):
     def test_batches(self):
-        lm_batches = list(language_model_batches([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 3, 4))
+        lm_batches = list(language_model_batches([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], time_steps=3, batch_size=4))
         self.assertEquals(len(lm_batches), 3)
         # Batch 0
         np.testing.assert_equal(lm_batches[0][0], np.array([[0, 1, 2],
