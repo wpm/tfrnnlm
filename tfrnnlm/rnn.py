@@ -57,21 +57,21 @@ class RNN(object):
             train_summary = summary_writer(summary_directory, session.graph)
             session.run(self.initialize)
             epoch = 0
-            i = 0
+            iteration = 0
             try:
                 while True:
                     for context, target in language_model_batches(document, time_steps, batch_size):
-                        _, c, s, i = session.run([self.train, self.cost, self.summary, self.iteration],
-                                                 feed_dict={self.input: context, self.targets: target})
-                        logger.info("Epoch %d, Iteration %d, cost %0.4f" % (epoch, i, c))
-                        train_summary.add_summary(s, global_step=i)
-                        if max_iterations is not None and i > max_iterations:
+                        _, cost, summary, iteration = session.run([self.train, self.cost, self.summary, self.iteration],
+                                                                  feed_dict={self.input: context, self.targets: target})
+                        logger.info("Epoch %d, Iteration %d, cost %0.4f" % (epoch, iteration, cost))
+                        train_summary.add_summary(summary, global_step=iteration)
+                        if max_iterations is not None and iteration > max_iterations:
                             raise StopTrainingException()
                     epoch += 1
                     if max_epochs is not None and epoch > max_epochs:
                         raise StopTrainingException()
             except (StopTrainingException, KeyboardInterrupt):
-                logger.info("Stop training at epoch %d, iteration %d" % (epoch, i))
+                logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
                 train_summary.flush()
 
 
