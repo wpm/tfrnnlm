@@ -19,5 +19,5 @@ def train_model(args):
                     args.init, args.keep, args.layers,
                     args.max_gradient, args.learning_rate)
         model.train_model(data, args.time_steps, args.batch_size,
-                          os.path.join(args.model, "summary"),
+                          os.path.join(args.model, "summary"), args.logging_interval,
                           args.max_epochs, args.max_iterations)

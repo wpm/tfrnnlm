@@ -24,9 +24,10 @@ class RNN(object):
             if keep < 1:
                 cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=keep)
             rnn_layers = tf.nn.rnn_cell.MultiRNNCell([cell] * layers)
-            self.state = rnn_layers.zero_state(batch_size, dtype=tf.float32)
-            self.outputs, self.state = tf.nn.dynamic_rnn(rnn_layers, self.embedded_input, time_major=True,
-                                                         initial_state=self.state)
+            self.reset_state = rnn_layers.zero_state(batch_size, dtype=tf.float32)
+            self.state = tf.placeholder(tf.float32, self.reset_state.get_shape(), "state")
+            self.outputs, self.next_state = tf.nn.dynamic_rnn(rnn_layers, self.embedded_input, time_major=True,
+                                                              initial_state=self.state)
 
         with tf.name_scope("Cost"):
             # Concatenate all the batches into a single row.
@@ -53,19 +54,25 @@ class RNN(object):
         self.initialize = tf.initialize_all_variables()
         self.summary = tf.merge_all_summaries()
 
-    def train_model(self, document, time_steps, batch_size, summary_directory, max_epochs=None, max_iterations=None):
+    def train_model(self, document, time_steps, batch_size, summary_directory, logging_interval,
+                    max_epochs=None, max_iterations=None):
         with tf.Session() as session:
             train_summary = summary_writer(summary_directory, session.graph)
             session.run(self.initialize)
-            epoch = 0
-            iteration = 0
+            epoch = 1
+            iteration = None
             try:
                 while True:
+                    state = session.run(self.reset_state)
                     for context, target in language_model_batches(document, time_steps, batch_size):
-                        _, cost, summary, iteration = session.run([self.train, self.cost, self.summary, self.iteration],
-                                                                  feed_dict={self.input: context, self.targets: target})
-                        logger.info("Epoch %d, Iteration %d, cost %0.4f" % (epoch, iteration, cost))
-                        train_summary.add_summary(summary, global_step=iteration)
+                        _, cost, state, summary, iteration = session.run(
+                            [self.train, self.cost, self.next_state, self.summary, self.iteration],
+                            feed_dict={self.input: context,
+                                       self.targets: target,
+                                       self.state: state})
+                        if (iteration - 1) % logging_interval == 0:
+                            logger.info("Epoch %d, Iteration %d, cost %0.4f" % (epoch, iteration, cost))
+                            train_summary.add_summary(summary, global_step=iteration)
                         if max_iterations is not None and iteration > max_iterations:
                             raise StopTrainingException()
                     epoch += 1
