@@ -18,6 +18,7 @@ def main():
                                   help="train a language model")
     train.add_argument("text", type=argparse.FileType(), help="file containing training text")
     train.add_argument("model", type=model_directory, help="directory to which to write the model")
+    train.add_argument("--max-vocabulary", type=int, help="maximum vocabulary size")
     train.add_argument("--time-steps", type=int, default=20, help="training unrolled time steps")
     train.add_argument("--batch-size", type=int, default=20, help="training size batch")
     train.add_argument("--hidden-units", type=int, default=650, help="number of hidden units in the RNN")

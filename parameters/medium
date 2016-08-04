@@ -1,9 +1,9 @@
 --max-vocabulary=10000
 --batch-size=20
---hidden-units=200
+--hidden-units=650
 --layers=2
---keep=1.0
+--keep=0.5
 --max-gradient=5
---max-epochs=4
+--max-epochs=6
 --learning-rate=1.0
---init=0.1
+--init=0.05

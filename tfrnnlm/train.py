@@ -9,7 +9,7 @@ from tfrnnlm.text import whitespace_word_tokenization, IndexedVocabulary
 
 def train_model(args):
     tokens = whitespace_word_tokenization(args.text.read())
-    vocabulary = IndexedVocabulary(tokens)
+    vocabulary = IndexedVocabulary(tokens, max_vocabulary=args.max_vocabulary)
     logger.info(vocabulary)
     with open(os.path.join(args.model, "vocabulary"), "wb") as vocabulary_file:
         pickle.dump(vocabulary, vocabulary_file)
