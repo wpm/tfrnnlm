@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import tensorflow as tf
 from tfrnnlm import logger
 from tfrnnlm.text import language_model_batches
@@ -42,7 +43,7 @@ class RNN(object):
             # Compare predictions to labels.
             self.loss = tf.nn.seq2seq.sequence_loss_by_example([self.predicted], [tf.concat(-1, self.targets)],
                                                                [tf.ones(batch_size * time_steps)])
-            self.cost = tf.div(tf.reduce_sum(self.loss), batch_size * time_steps, name="cost")
+            self.cost = tf.div(tf.reduce_sum(self.loss), batch_size, name="cost")
             tf.scalar_summary(self.cost.op.name, self.cost)
 
         with tf.name_scope("Train"):
@@ -70,6 +71,8 @@ class RNN(object):
             iteration = None
             try:
                 while True:
+                    epoch_cost = 0
+                    epoch_iteration = 0
                     state = session.run(self.reset_state)
                     for context, target in language_model_batches(document, time_steps, batch_size):
                         _, cost, state, summary, iteration = session.run(
@@ -77,8 +80,11 @@ class RNN(object):
                             feed_dict={self.input: context,
                                        self.targets: target,
                                        self.state: state})
+                        epoch_cost += cost
+                        epoch_iteration += time_steps
                         if (iteration - 1) % logging_interval == 0:
-                            logger.info("Epoch %d, Iteration %d, cost %0.4f" % (epoch, iteration, cost))
+                            logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
+                                epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
                             train_summary.add_summary(summary, global_step=iteration)
                         if max_iterations is not None and iteration > max_iterations:
                             raise StopTrainingException()
