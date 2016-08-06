@@ -36,6 +36,14 @@ class TestIndexing(TestCase):
         self.assertIsInstance(indexes, collections.Iterable)
         self.assertEqual(list(indexes), [1, 8, 2, 4, 5, 7, 1, 6, 3])
 
+    def test_out_of_vocabulary(self):
+        tokens = "a a a b b OOV c".split()
+        v = IndexedVocabulary(tokens, out_of_vocabulary="OOV")
+        self.assertEqual(v.index("OOV"), 0)
+        self.assertEqual(v.index("a"), 1)
+        self.assertEqual(v.index("b"), 2)
+        self.assertEqual(v.index("c"), 3)
+
 
 class TestBatches(TestCase):
     def test_batches(self):

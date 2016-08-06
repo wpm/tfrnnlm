@@ -26,13 +26,14 @@ def whitespace_word_tokenization(text):
 class IndexedVocabulary(object):
     """
     Given a sequence of tokens, create a unique integer mapping from an integer to a type. Out of vocabulary types map
-    to a default value of zero.
+    to the index zero. By default, the out of vocabulary type is None. Optionally, a string can be supplied (e.g.
+    "<UNK>") if the text already has out of vocabulary types marked.
 
     If a minimum token frequency is specified, all tokens with a lower frequency are mapped to out of vocabulary. If a
     maximum vocabulary size is specified, only the most frequent types will be indexed.
     """
 
-    def __init__(self, tokens, min_frequency=None, max_vocabulary=None):
+    def __init__(self, tokens, min_frequency=None, max_vocabulary=None, out_of_vocabulary=None):
         """
         :param tokens: sequence of natural language tokens
         :type tokens: iterator of str
@@ -40,9 +41,14 @@ class IndexedVocabulary(object):
         :type min_frequency: int or None
         :param max_vocabulary: maximum vocabulary size
         :type max_vocabulary: int or None
+        :param out_of_vocabulary out of vocabulary type
+        :type str or None
         """
         # Sort in descending order by frequency and then by token so that the composition of the vocabulary is
         # deterministic.
+        self.out_of_vocabulary = out_of_vocabulary
+        if self.out_of_vocabulary is not None:
+            tokens = (token for token in tokens if token != out_of_vocabulary)
         types = sorted(Counter(tokens).items(), key=lambda t: (-t[1], t[0]))
         if min_frequency is not None:
             types = list(takewhile(lambda t: t[1] >= min_frequency, types))
@@ -54,8 +60,12 @@ class IndexedVocabulary(object):
         return "Indexed Vocabulary, size %d" % len(self)
 
     def __str__(self):
-        return "%s: %s ..." % (
-            repr(self), " ".join("%s:%d" % (t, i) for i, t in sorted(self.index_to_type.items())[:5]))
+        n = min(5, len(self))
+        items = ["%s:%d" % (self.type(i), i) for i in range(n)]
+        s = "%s: %s" % (repr(self), " ".join(items))
+        if len(self) > 5:
+            s += " ..."
+        return s
 
     def __len__(self):
         # Add 1 for the out of vocabulary type.
@@ -77,7 +87,7 @@ class IndexedVocabulary(object):
         :return: the type
         :rtype: str
         """
-        return self.index_to_type.get(index, None)
+        return self.index_to_type.get(index, self.out_of_vocabulary)
 
     def index_tokens(self, tokens):
         """
