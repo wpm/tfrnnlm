@@ -1,3 +1,4 @@
+import collections
 from unittest import TestCase
 
 import numpy as np
@@ -27,6 +28,13 @@ class TestIndexing(TestCase):
         v = IndexedVocabulary("hamlet hamlet hamlet to be or not to be".split(), max_vocabulary=2, min_frequency=2)
         self.assertEqual(set(v.type_to_index.keys()), {"be", "hamlet"})
         self.assertEqual(len(v), 3)
+
+    def test_index_tokens(self):
+        tokens = "the quick brown fox jumped over the lazy dog".split()
+        v = IndexedVocabulary(tokens)
+        indexes = v.index_tokens(tokens)
+        self.assertIsInstance(indexes, collections.Iterable)
+        self.assertEqual(list(indexes), [1, 8, 2, 4, 5, 7, 1, 6, 3])
 
 
 class TestBatches(TestCase):

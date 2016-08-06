@@ -79,6 +79,17 @@ class IndexedVocabulary(object):
         """
         return self.index_to_type.get(index, None)
 
+    def index_tokens(self, tokens):
+        """
+        Convert a sequence of tokens to their corresponding indexes
+
+        :param tokens: sequence of tokens
+        :type tokens: iterable of str
+        :return: the token indexes
+        :rtype: iterable of int
+        """
+        return (self.index(token) for token in tokens)
+
 
 def language_model_batches(data, time_steps, batch_size):
     total_time = len(data)
