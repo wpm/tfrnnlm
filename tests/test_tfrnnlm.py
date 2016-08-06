@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import numpy as np
 from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches, \
-    penn_treebank_tokenization
+    penn_treebank_tokenization, vocabulary_from_documents
 
 
 class TestTokenization(TestCase):
@@ -54,6 +54,18 @@ class TestIndexing(TestCase):
         self.assertEqual(v.index("a"), 1)
         self.assertEqual(v.index("b"), 2)
         self.assertEqual(v.index("c"), 3)
+
+    def test_vocabulary_from_documents(self):
+        doc1 = "cat dog horse"
+        doc2 = "cat cat mouse"
+        doc3 = "whale dog zebra"
+        v = vocabulary_from_documents([doc1, doc2, doc3], whitespace_word_tokenization, IndexedVocabulary.factory())
+        self.assertEqual(v.index("cat"), 1)
+        self.assertEqual(v.index("dog"), 2)
+        self.assertEqual(v.index("horse"), 3)
+        self.assertEqual(v.index("mouse"), 4)
+        self.assertEqual(v.index("whale"), 5)
+        self.assertEqual(v.index("zebra"), 6)
 
 
 class TestBatches(TestCase):

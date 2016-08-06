@@ -1,8 +1,26 @@
+import itertools
 import re
 from collections import Counter
 from itertools import takewhile
 
 import numpy as np
+
+
+def vocabulary_from_documents(documents, tokenizer, vocabulary_factory):
+    """
+    Create an indexed vocabulary from a set of documents.
+
+    :param documents: sequence of documents
+    :type documents: iterable of str
+    :param tokenizer: document tokenizer
+    :type tokenizer: function str -> iterable of str
+    :param vocabulary_factory: function to create a vocabulary given tokens
+    :type vocabulary_factory: function iterable of str -> IndexedVocabulary
+    :return: indexed vocabulary
+    :rtype: IndexedVocabulary
+    """
+    tokens = itertools.chain(*(tokenizer(document) for document in documents))
+    return vocabulary_factory(tokens)
 
 
 def whitespace_word_tokenization(text):
@@ -53,6 +71,10 @@ class IndexedVocabulary(object):
     maximum vocabulary size is specified, only the most frequent types will be indexed.
     """
 
+    @classmethod
+    def factory(cls, min_frequency=None, max_vocabulary=None, out_of_vocabulary=None):
+        return lambda tokens: cls(tokens, min_frequency, max_vocabulary, out_of_vocabulary)
+
     def __init__(self, tokens, min_frequency=None, max_vocabulary=None, out_of_vocabulary=None):
         """
         :param tokens: sequence of natural language tokens
@@ -62,7 +84,7 @@ class IndexedVocabulary(object):
         :param max_vocabulary: maximum vocabulary size
         :type max_vocabulary: int or None
         :param out_of_vocabulary out of vocabulary type
-        :type str or None
+        :type out_of_vocabulary str or None
         """
         # Sort in descending order by frequency and then by token so that the composition of the vocabulary is
         # deterministic.
