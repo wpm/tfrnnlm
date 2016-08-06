@@ -17,7 +17,7 @@ def main():
     train = subparsers.add_parser("train", description="Train an RNN language model.", parents=[shared],
                                   help="train a language model")
     train.add_argument("text", type=argparse.FileType(), help="file containing training text")
-    train.add_argument("model", type=model_directory, help="directory to which to write the model")
+    train.add_argument("--model", type=model_directory, help="directory to which to write the model")
     train.add_argument("--max-vocabulary", type=int, help="maximum vocabulary size")
     train.add_argument("--time-steps", type=int, default=20, help="training unrolled time steps")
     train.add_argument("--batch-size", type=int, default=20, help="training size batch")
@@ -26,7 +26,7 @@ def main():
     train.add_argument("--keep", type=float, default=0.5, help="probability to keep a cell in a dropout layer")
     train.add_argument("--max-gradient", type=float, default=5, help="value to clip gradients to")
     train.add_argument("--max-iterations", type=int, help="number of training iterations to run")
-    train.add_argument("--logging-interval", type=int, default=100,
+    train.add_argument("--logging-interval", type=int, default=10,
                        help="log and write summary after this many iterations")
     train.add_argument("--max-epochs", type=int, default=6, help="number of training epochs to run")
     train.add_argument("--learning-rate", type=float, default=1.0, help="training learning rate")

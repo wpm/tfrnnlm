@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 from tfrnnlm import logger
 from tfrnnlm.text import language_model_batches
@@ -54,8 +56,13 @@ class RNN(object):
         self.initialize = tf.initialize_all_variables()
         self.summary = tf.merge_all_summaries()
 
-    def train_model(self, document, time_steps, batch_size, summary_directory, logging_interval,
+    def train_model(self, document, time_steps, batch_size, model_directory, logging_interval,
                     max_epochs=None, max_iterations=None):
+        if model_directory is not None:
+            summary_directory = os.path.join(model_directory, "summary")
+        else:
+            summary_directory = None
+
         with tf.Session() as session:
             train_summary = summary_writer(summary_directory, session.graph)
             session.run(self.initialize)
