@@ -23,6 +23,26 @@ def whitespace_word_tokenization(text):
     return re.sub("[^\w]", " ", text.lower()).strip().split()
 
 
+def penn_treebank_tokenization(text):
+    """
+    Tokenize Penn Treebank Data
+
+    Split on whitespace and insert an <eos> symbol at the end of each line.
+
+    Penn Treebank uses <unk> to mark unknown words. Specify this as the optional out of vocabulary token when creating
+    an IndexedVocabulary.
+
+    :param text: text to tokenize
+    :type text: str
+    :return: tokens in the text file
+    :rtype: [str]
+    """
+    for line in text.split("\n"):
+        for token in line.strip().split():
+            yield token
+        yield "<eos>"
+
+
 class IndexedVocabulary(object):
     """
     Given a sequence of tokens, create a unique integer mapping from an integer to a type. Out of vocabulary types map

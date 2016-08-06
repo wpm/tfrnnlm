@@ -1,8 +1,10 @@
 import collections
+import textwrap
 from unittest import TestCase
 
 import numpy as np
-from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches
+from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches, \
+    penn_treebank_tokenization
 
 
 class TestTokenization(TestCase):
@@ -10,6 +12,15 @@ class TestTokenization(TestCase):
         tokens = whitespace_word_tokenization("\nCall me Ishmael. Some years ago--never mind how long precisely  ")
         self.assertEqual(tokens,
                          ["call", "me", "ishmael", "some", "years", "ago", "never", "mind", "how", "long", "precisely"])
+
+    def test_penn_treebank_word_tokenization(self):
+        s = textwrap.dedent("""seoul also has instituted effective <unk> procedures to aid these teams she said
+taiwan has improved""")
+        actual = penn_treebank_tokenization(s)
+        self.assertIsInstance(actual, collections.Iterable)
+        expected = ["seoul", "also", "has", "instituted", "effective", "<unk>", "procedures", "to", "aid", "these",
+                    "teams", "she", "said", "<eos>", "taiwan", "has", "improved", "<eos>"]
+        self.assertEqual(list(actual), expected)
 
 
 class TestIndexing(TestCase):
