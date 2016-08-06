@@ -18,7 +18,7 @@ def train_model(args):
         logger.warn("Not saving a model.")
     data = [vocabulary.index(token) for token in tokens]
     with tf.Graph().as_default():
-        model = RNN(args.batch_size, args.time_steps, len(vocabulary), args.hidden_units,
+        model = RNN(args.batch_size, args.time_steps, vocabulary, args.hidden_units,
                     args.init, args.keep, args.layers,
                     args.max_gradient, args.learning_rate)
         model.train_model(data, args.time_steps, args.batch_size,

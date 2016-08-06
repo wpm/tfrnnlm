@@ -9,9 +9,11 @@ from tfrnnlm.text import language_model_batches
 class RNN(object):
     """Recursive Neural Network"""
 
-    def __init__(self, batch_size, time_steps, vocabulary_size,
+    def __init__(self, batch_size, time_steps, vocabulary,
                  hidden_units, init, keep, layers,
                  max_gradient, learning_rate):
+        self.vocabulary = vocabulary
+        vocabulary_size = len(self.vocabulary)
         with tf.name_scope("Input"):
             self.input = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="input")
             self.targets = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="targets")
