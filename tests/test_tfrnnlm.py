@@ -3,20 +3,20 @@ import textwrap
 from unittest import TestCase
 
 import numpy as np
-from tfrnnlm.text import IndexedVocabulary, whitespace_word_tokenization, language_model_batches, \
-    penn_treebank_tokenization, vocabulary_from_documents
+from tfrnnlm.prepare_data import vocabulary_from_documents
+from tfrnnlm.text import IndexedVocabulary, language_model_batches, WhitespaceWordTokenization, PennTreebankTokenization
 
 
 class TestTokenization(TestCase):
     def test_whitespace_word_tokenization(self):
-        tokens = whitespace_word_tokenization("\nCall me Ishmael. Some years ago--never mind how long precisely  ")
+        tokens = WhitespaceWordTokenization()("\nCall me Ishmael. Some years ago--never mind how long precisely  ")
         self.assertEqual(tokens,
                          ["call", "me", "ishmael", "some", "years", "ago", "never", "mind", "how", "long", "precisely"])
 
     def test_penn_treebank_word_tokenization(self):
         s = textwrap.dedent("""seoul also has instituted effective <unk> procedures to aid these teams she said
 taiwan has improved""")
-        actual = penn_treebank_tokenization(s)
+        actual = PennTreebankTokenization()(s)
         self.assertIsInstance(actual, collections.Iterable)
         expected = ["seoul", "also", "has", "instituted", "effective", "<unk>", "procedures", "to", "aid", "these",
                     "teams", "she", "said", "<eos>", "taiwan", "has", "improved", "<eos>"]
@@ -59,7 +59,7 @@ class TestIndexing(TestCase):
         doc1 = "cat dog horse"
         doc2 = "cat cat mouse"
         doc3 = "whale dog zebra"
-        v = vocabulary_from_documents([doc1, doc2, doc3], whitespace_word_tokenization, IndexedVocabulary.factory())
+        v = vocabulary_from_documents([doc1, doc2, doc3], WhitespaceWordTokenization(), IndexedVocabulary.factory())
         self.assertEqual(v.index("cat"), 1)
         self.assertEqual(v.index("dog"), 2)
         self.assertEqual(v.index("horse"), 3)

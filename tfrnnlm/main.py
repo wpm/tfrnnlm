@@ -1,8 +1,11 @@
 import argparse
 import os
+import pickle
 
+import numpy as np
 from tfrnnlm import configure_logger, __version__
-from tfrnnlm.text import whitespace_word_tokenization, penn_treebank_tokenization
+from tfrnnlm.prepare_data import index_text_files
+from tfrnnlm.text import WhitespaceWordTokenization, PennTreebankTokenization
 from tfrnnlm.train import train_model
 
 
@@ -15,13 +18,22 @@ def main():
 
     subparsers = parser.add_subparsers(title="TensorFlow RNN Language Model")
 
+    index = subparsers.add_parser("index", description="Index text files and create a vocabulary.", parents=[shared],
+                                  help="index text files")
+    index.add_argument("indexed_data_directory", type=create_new_directory,
+                       help="directory to put indexed files and vocabulary")
+    index.add_argument("documents", nargs="+", help="text files")
+    index.add_argument("--tokenization", choices=["word", "penntb"], default="word", help="tokenization method")
+    index.add_argument("--min-frequency", type=int, help="minimum type frequency for inclusion in the vocabulary")
+    index.add_argument("--max-vocabulary", type=int, help="maximum vocabulary size")
+    index.set_defaults(func=index_text_files)
+
     train = subparsers.add_parser("train", description="Train an RNN language model.", parents=[shared],
                                   help="train a language model")
-    train.add_argument("train", nargs="+", help="files containing training text")
-    train.add_argument("--validate", nargs="+", default=[], help="files containing validation text")
-    train.add_argument("--tokenization", choices=["word", "penntb"], default="word", help="tokenization")
-    train.add_argument("--model", type=model_directory, help="directory to which to write the model")
-    train.add_argument("--max-vocabulary", type=int, help="maximum vocabulary size")
+    train.add_argument("vocabulary", type=vocabulary, help="indexed vocabulary file")
+    train.add_argument("train", nargs="+", type=np.load, help="files containing training data")
+    train.add_argument("--validate", nargs="+", type=np.load, default=[], help="files containing validation data")
+    train.add_argument("--model", type=create_new_directory, help="directory to which to write the model")
     train.add_argument("--time-steps", type=int, default=20, help="training unrolled time steps")
     train.add_argument("--batch-size", type=int, default=20, help="training size batch")
     train.add_argument("--hidden-units", type=int, default=650, help="number of hidden units in the RNN")
@@ -48,14 +60,21 @@ def main():
 
     configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
 
-    args.tokenization = {"word": whitespace_word_tokenization, "penntb": penn_treebank_tokenization}[args.tokenization]
+    if hasattr(args, "tokenization"):
+        args.tokenization = {"word": WhitespaceWordTokenization(),
+                             "penntb": PennTreebankTokenization()}[args.tokenization]
     args.func(args)
 
 
-def model_directory(directory):
+def create_new_directory(directory):
     try:
         os.makedirs(directory)
     except FileExistsError:
         parser.print_usage()
-        parser.error("The model directory %s already exists." % directory)
+        parser.error("The directory %s already exists." % directory)
     return directory
+
+
+def vocabulary(filename):
+    with open(filename, "rb") as f:
+        return pickle.load(f)

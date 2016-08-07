@@ -1,4 +1,3 @@
---max-vocabulary=10000
 --batch-size=20
 --time-steps=20
 --hidden-units=200

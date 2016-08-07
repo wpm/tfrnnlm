@@ -1,4 +1,3 @@
-import itertools
 import re
 from collections import Counter
 from itertools import takewhile
@@ -6,24 +5,7 @@ from itertools import takewhile
 import numpy as np
 
 
-def vocabulary_from_documents(documents, tokenization, vocabulary_factory):
-    """
-    Create an indexed vocabulary from a set of documents.
-
-    :param documents: sequence of documents
-    :type documents: iterable of str
-    :param tokenization: document tokenizer
-    :type tokenization: function str -> iterable of str
-    :param vocabulary_factory: function to create a vocabulary given tokens
-    :type vocabulary_factory: function iterable of str -> IndexedVocabulary
-    :return: indexed vocabulary
-    :rtype: IndexedVocabulary
-    """
-    tokens = itertools.chain(*(tokenization(document) for document in documents))
-    return vocabulary_factory(tokens)
-
-
-def whitespace_word_tokenization(text):
+class WhitespaceWordTokenization(object):
     """
     Tokenize on whitespace, dropping punctuation and normalizing to lower-case, e.g.
 
@@ -32,16 +14,16 @@ def whitespace_word_tokenization(text):
     goes to
 
         call me ishmael some years ago never mind how long precisely...
-
-    :param text: text to tokenize
-    :type text: str
-    :return: tokens in the text file
-    :rtype: [str]
     """
-    return re.sub("[^\w]", " ", text.lower()).strip().split()
+
+    def __str__(self):
+        return "Whitespace Word Tokenization"
+
+    def __call__(self, text):
+        return re.sub("[^\w]", " ", text.lower()).strip().split()
 
 
-def penn_treebank_tokenization(text):
+class PennTreebankTokenization(object):
     """
     Tokenize Penn Treebank Data
 
@@ -49,16 +31,16 @@ def penn_treebank_tokenization(text):
 
     Penn Treebank uses <unk> to mark unknown words. Specify this as the optional out of vocabulary token when creating
     an IndexedVocabulary.
-
-    :param text: text to tokenize
-    :type text: str
-    :return: tokens in the text file
-    :rtype: [str]
     """
-    for line in text.split("\n"):
-        for token in line.strip().split():
-            yield token
-        yield "<eos>"
+
+    def __str__(self):
+        return "Penn Treebank Tokenization"
+
+    def __call__(self, text):
+        for line in text.split("\n"):
+            for token in line.strip().split():
+                yield token
+            yield "<eos>"
 
 
 class IndexedVocabulary(object):
