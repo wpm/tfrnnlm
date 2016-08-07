@@ -59,7 +59,7 @@ class RNN(object):
         self.initialize = tf.initialize_all_variables()
         self.summary = tf.merge_all_summaries()
 
-    def train_model(self, document, time_steps, batch_size, model_directory, logging_interval,
+    def train_model(self, documents, time_steps, batch_size, model_directory, logging_interval,
                     max_epochs=None, max_iterations=None):
         if model_directory is not None:
             summary_directory = os.path.join(model_directory, "summary")
@@ -75,21 +75,20 @@ class RNN(object):
                 while True:
                     epoch_cost = 0
                     epoch_iteration = 0
-                    state = session.run(self.reset_state)
-                    for context, target in language_model_batches(document, time_steps, batch_size):
-                        _, cost, state, summary, iteration = session.run(
-                            [self.train, self.cost, self.next_state, self.summary, self.iteration],
-                            feed_dict={self.input: context,
-                                       self.targets: target,
-                                       self.state: state})
-                        epoch_cost += cost
-                        epoch_iteration += time_steps
-                        if (iteration - 1) % logging_interval == 0:
-                            logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
-                                epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
-                            train_summary.add_summary(summary, global_step=iteration)
-                        if max_iterations is not None and iteration > max_iterations:
-                            raise StopTrainingException()
+                    for document in documents:
+                        state = session.run(self.reset_state)
+                        for context, target in language_model_batches(document, time_steps, batch_size):
+                            _, cost, state, summary, iteration = session.run(
+                                [self.train, self.cost, self.next_state, self.summary, self.iteration],
+                                feed_dict={self.input: context, self.targets: target, self.state: state})
+                            epoch_cost += cost
+                            epoch_iteration += time_steps
+                            if (iteration - 1) % logging_interval == 0:
+                                logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
+                                    epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
+                                train_summary.add_summary(summary, global_step=iteration)
+                            if max_iterations is not None and iteration > max_iterations:
+                                raise StopTrainingException()
                     epoch += 1
                     if max_epochs is not None and epoch > max_epochs:
                         raise StopTrainingException()

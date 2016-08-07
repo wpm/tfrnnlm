@@ -6,20 +6,20 @@ from itertools import takewhile
 import numpy as np
 
 
-def vocabulary_from_documents(documents, tokenizer, vocabulary_factory):
+def vocabulary_from_documents(documents, tokenization, vocabulary_factory):
     """
     Create an indexed vocabulary from a set of documents.
 
     :param documents: sequence of documents
     :type documents: iterable of str
-    :param tokenizer: document tokenizer
-    :type tokenizer: function str -> iterable of str
+    :param tokenization: document tokenizer
+    :type tokenization: function str -> iterable of str
     :param vocabulary_factory: function to create a vocabulary given tokens
     :type vocabulary_factory: function iterable of str -> IndexedVocabulary
     :return: indexed vocabulary
     :rtype: IndexedVocabulary
     """
-    tokens = itertools.chain(*(tokenizer(document) for document in documents))
+    tokens = itertools.chain(*(tokenization(document) for document in documents))
     return vocabulary_factory(tokens)
 
 

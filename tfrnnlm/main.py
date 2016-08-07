@@ -2,6 +2,7 @@ import argparse
 import os
 
 from tfrnnlm import configure_logger, __version__
+from tfrnnlm.text import whitespace_word_tokenization, penn_treebank_tokenization
 from tfrnnlm.train import train_model
 
 
@@ -16,7 +17,9 @@ def main():
 
     train = subparsers.add_parser("train", description="Train an RNN language model.", parents=[shared],
                                   help="train a language model")
-    train.add_argument("text", type=argparse.FileType(), help="file containing training text")
+    train.add_argument("train", nargs="+", help="files containing training text")
+    train.add_argument("--validate", nargs="+", default=[], help="files containing validation text")
+    train.add_argument("--tokenization", choices=["word", "penntb"], default="word", help="tokenization")
     train.add_argument("--model", type=model_directory, help="directory to which to write the model")
     train.add_argument("--max-vocabulary", type=int, help="maximum vocabulary size")
     train.add_argument("--time-steps", type=int, default=20, help="training unrolled time steps")
@@ -44,6 +47,8 @@ def main():
         parser.exit(0)
 
     configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
+
+    args.tokenization = {"word": whitespace_word_tokenization, "penntb": penn_treebank_tokenization}[args.tokenization]
     args.func(args)
 
 
