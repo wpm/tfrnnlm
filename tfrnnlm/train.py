@@ -9,8 +9,8 @@ def train_model(args):
     logger.info(args.vocabulary)
     with tf.Graph().as_default():
         model = RNN(args.batch_size, args.time_steps, args.vocabulary, args.hidden_units,
-                    args.init, args.keep, args.layers,
+                    args.init, args.layers,
                     args.max_gradient, args.learning_rate)
-        model.train_model(args.train, args.time_steps, args.batch_size,
+        model.train_model(args.train, args.time_steps, args.batch_size, args.keep,
                           args.model, args.logging_interval,
                           args.max_epochs, args.max_iterations)

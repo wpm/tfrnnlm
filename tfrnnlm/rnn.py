@@ -9,14 +9,13 @@ from tfrnnlm.text import language_model_batches
 class RNN(object):
     """Recursive Neural Network"""
 
-    def __init__(self, batch_size, time_steps, vocabulary,
-                 hidden_units, init, keep, layers,
-                 max_gradient, learning_rate):
+    def __init__(self, batch_size, time_steps, vocabulary, hidden_units, init, layers, max_gradient, learning_rate):
         self.vocabulary = vocabulary
         vocabulary_size = len(self.vocabulary)
         with tf.name_scope("Input"):
             self.input = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="input")
             self.targets = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="targets")
+            self.keep_probability = tf.placeholder(tf.float32, name="keep_probability")
 
         with tf.name_scope("Embedding"):
             self.embedding = tf.Variable(tf.random_uniform((vocabulary_size, hidden_units), -init, init),
@@ -26,8 +25,7 @@ class RNN(object):
 
         with tf.name_scope("RNN"):
             cell = tf.nn.rnn_cell.LSTMCell(hidden_units)
-            if keep < 1:
-                cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=keep)
+            cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=self.keep_probability)
             rnn_layers = tf.nn.rnn_cell.MultiRNNCell([cell] * layers)
             self.reset_state = rnn_layers.zero_state(batch_size, dtype=tf.float32)
             self.state = tf.placeholder(tf.float32, self.reset_state.get_shape(), "state")
@@ -59,7 +57,7 @@ class RNN(object):
         self.initialize = tf.initialize_all_variables()
         self.summary = tf.merge_all_summaries()
 
-    def train_model(self, documents, time_steps, batch_size, model_directory, logging_interval,
+    def train_model(self, documents, time_steps, batch_size, keep_probability, model_directory, logging_interval,
                     max_epochs=None, max_iterations=None):
         if model_directory is not None:
             summary_directory = os.path.join(model_directory, "summary")
@@ -80,7 +78,12 @@ class RNN(object):
                         for context, target in language_model_batches(document, time_steps, batch_size):
                             _, cost, state, summary, iteration = session.run(
                                 [self.train, self.cost, self.next_state, self.summary, self.iteration],
-                                feed_dict={self.input: context, self.targets: target, self.state: state})
+                                feed_dict={
+                                    self.input: context,
+                                    self.targets: target,
+                                    self.state: state,
+                                    self.keep_probability: keep_probability
+                                })
                             epoch_cost += cost
                             epoch_iteration += time_steps
                             if (iteration - 1) % logging_interval == 0:
