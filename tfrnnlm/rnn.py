@@ -9,13 +9,16 @@ from tfrnnlm.text import language_model_batches
 class RNN(object):
     """Recursive Neural Network"""
 
-    def __init__(self, batch_size, time_steps, vocabulary, hidden_units, init, layers, max_gradient, learning_rate):
+    def __init__(self, init, max_gradient, batch_size, time_steps, vocabulary, hidden_units, layers):
         self.vocabulary = vocabulary
         vocabulary_size = len(self.vocabulary)
+        with tf.name_scope("Parameters"):
+            self.learning_rate = tf.placeholder(tf.float32, name="learning_rate")
+            self.keep_probability = tf.placeholder(tf.float32, name="keep_probability")
+
         with tf.name_scope("Input"):
             self.input = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="input")
             self.targets = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="targets")
-            self.keep_probability = tf.placeholder(tf.float32, name="keep_probability")
 
         with tf.name_scope("Embedding"):
             self.embedding = tf.Variable(tf.random_uniform((vocabulary_size, hidden_units), -init, init),
@@ -48,16 +51,24 @@ class RNN(object):
 
         with tf.name_scope("Train"):
             self.iteration = tf.Variable(0, name="iteration", trainable=False)
-            self.gradients, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tf.trainable_variables()), max_gradient,
-                                                       name="clip_gradients")
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+            self.gradients, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tf.trainable_variables()),
+                                                       max_gradient, name="clip_gradients")
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
             self.train = optimizer.apply_gradients(zip(self.gradients, tf.trainable_variables()), name="train",
                                                    global_step=self.iteration)
 
         self.initialize = tf.initialize_all_variables()
         self.summary = tf.merge_all_summaries()
 
-    def train_model(self, documents, time_steps, batch_size, keep_probability, model_directory, logging_interval,
+    @property
+    def batch_size(self):
+        return self.input.get_shape()[0].value
+
+    @property
+    def time_steps(self):
+        return self.input.get_shape()[1].value
+
+    def train_model(self, documents, learning_rate, keep_probability, model_directory, logging_interval,
                     max_epochs=None, max_iterations=None):
         if model_directory is not None:
             summary_directory = os.path.join(model_directory, "summary")
@@ -75,17 +86,18 @@ class RNN(object):
                     epoch_iteration = 0
                     for document in documents:
                         state = session.run(self.reset_state)
-                        for context, target in language_model_batches(document, time_steps, batch_size):
+                        for context, target in language_model_batches(document, self.time_steps, self.batch_size):
                             _, cost, state, summary, iteration = session.run(
                                 [self.train, self.cost, self.next_state, self.summary, self.iteration],
                                 feed_dict={
                                     self.input: context,
                                     self.targets: target,
                                     self.state: state,
+                                    self.learning_rate: learning_rate,
                                     self.keep_probability: keep_probability
                                 })
                             epoch_cost += cost
-                            epoch_iteration += time_steps
+                            epoch_iteration += self.time_steps
                             if (iteration - 1) % logging_interval == 0:
                                 logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
                                     epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
