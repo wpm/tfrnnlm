@@ -84,20 +84,21 @@ class RNN(object):
                 })
             epoch_cost += cost
             epoch_iteration += self.time_steps
-            yield epoch, iteration, np.exp(epoch_cost / epoch_iteration), summary
+            yield epoch, new_epoch, iteration, np.exp(epoch_cost / epoch_iteration), summary
 
     def test(self, session, documents):
-        state = session.run(self.reset_state)
+        state = None
         epoch_cost = epoch_iteration = 0
-        for _, __, ___, context, target in epochs(documents, self.time_steps, self.batch_size, 1):
-            _, cost, state, summary, iteration = session.run(
-                [self.train_step, self.cost, self.next_state, self.summary, self.iteration],
-                feed_dict={
-                    self.input: context,
-                    self.targets: target,
-                    self.state: state,
-                    self.keep_probability: 1
-                })
+        for _, __, new_document, context, target in epochs(documents, self.time_steps, self.batch_size, 1):
+            if new_document:
+                state = session.run(self.reset_state)
+            cost, state, iteration = session.run([self.cost, self.next_state, self.iteration],
+                                                 feed_dict={
+                                                     self.input: context,
+                                                     self.targets: target,
+                                                     self.state: state,
+                                                     self.keep_probability: 1
+                                                 })
             epoch_cost += cost
             epoch_iteration += self.time_steps
         return np.exp(epoch_cost / epoch_iteration)

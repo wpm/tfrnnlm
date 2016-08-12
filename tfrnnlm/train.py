@@ -6,11 +6,12 @@ from tfrnnlm.rnn import RNN
 
 
 def train_model(args):
+    summary_directory = None
     if args.model_directory is not None:
-        summary_directory = os.path.join(args.model, "summary")
+        if args.summary:
+            summary_directory = os.path.join(args.model, "summary")
     else:
         logger.warn("Not saving a model.")
-        summary_directory = None
     logger.info(args.vocabulary)
     with tf.Graph().as_default():
         model = RNN(args.init, args.max_gradient,
@@ -20,14 +21,16 @@ def train_model(args):
             epoch = iteration = None
             train_summary = summary_writer(summary_directory, session.graph)
             try:
-                for epoch, iteration, train_perplexity, summary in \
+                for epoch, new_epoch, iteration, train_perplexity, summary in \
                         model.train(session, args.training_set, args.learning_rate, args.keep_probability):
                     if iteration % args.logging_interval == 0:
-                        logger.info(
-                            "Epoch %d, Iteration %d, training perplexity %0.4f" % (epoch, iteration, train_perplexity))
+                        logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" %
+                                    (epoch, iteration, train_perplexity))
                         train_summary.add_summary(summary, global_step=iteration)
-                    if args.validation_interval is not None and iteration % args.validation_interval == 0:
-                        pass
+                    if new_epoch and args.validation_set and iteration > 1:
+                        validation_perplexity = model.test(session, args.validation_set)
+                        logger.info("Epoch %d, Iteration %d, validation perplexity %0.4f" %
+                                    (epoch, iteration, validation_perplexity))
                     if args.max_iterations is not None and iteration > args.max_iterations:
                         break
                     if args.max_epochs is not None and epoch > args.max_epochs:

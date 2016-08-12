@@ -3,6 +3,7 @@ from collections import Counter
 from itertools import takewhile
 
 import numpy as np
+from tfrnnlm import logger
 
 
 class WhitespaceWordTokenization(object):
@@ -147,6 +148,7 @@ def epochs(documents, time_steps, batch_size, max_epochs=None):
     :return: epoch number, whether this is a new epoch and/or new document, batch context and target
     :rtype: iterator of (int, bool, bool, numpy.array, numpy.array)
     """
+    logger.info("Epoch size %d" % sum(len(document) for document in documents))
     epoch = 1
     while True:
         if max_epochs is not None and epoch > max_epochs:
