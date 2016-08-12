@@ -31,14 +31,14 @@ def main():
     train = subparsers.add_parser("train", description="Train an RNN language model.", parents=[shared],
                                   help="train a language model")
     train.add_argument("vocabulary", type=vocabulary, help="indexed vocabulary file")
-    train.add_argument("train", nargs="+", type=np.load, help="files containing training data")
+    train.add_argument("training_set", nargs="+", type=np.load, help="files containing training data")
     train.add_argument("--validate", nargs="+", type=np.load, default=[], help="files containing validation data")
-    train.add_argument("--model", type=create_new_directory, help="directory to which to write the model")
+    train.add_argument("--model-directory", type=create_new_directory, help="directory to which to write the model")
     train.add_argument("--time-steps", type=int, default=20, help="training unrolled time steps")
     train.add_argument("--batch-size", type=int, default=20, help="training size batch")
     train.add_argument("--hidden-units", type=int, default=650, help="number of hidden units in the RNN")
     train.add_argument("--layers", type=int, default=2, help="number of RNN layers")
-    train.add_argument("--keep", type=float, default=0.5, help="probability to keep a cell in a dropout layer")
+    train.add_argument("--keep-probability", type=float, default=0.5, help="probability to keep a cell in a dropout layer")
     train.add_argument("--max-gradient", type=float, default=5, help="value to clip gradients to")
     train.add_argument("--max-iterations", type=int, help="number of training iterations to run")
     train.add_argument("--logging-interval", type=int, default=10,

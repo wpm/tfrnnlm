@@ -6,9 +6,7 @@ from tfrnnlm.text import epochs
 class RNN(object):
     """Recursive Neural Network"""
 
-    def __init__(self, init, max_gradient, batch_size, time_steps, vocabulary, hidden_units, layers):
-        self.vocabulary = vocabulary
-        vocabulary_size = len(self.vocabulary)
+    def __init__(self, init, max_gradient, batch_size, time_steps, vocabulary_size, hidden_units, layers):
         with tf.name_scope("Parameters"):
             self.learning_rate = tf.placeholder(tf.float32, name="learning_rate")
             self.keep_probability = tf.placeholder(tf.float32, name="keep_probability")
@@ -66,10 +64,10 @@ class RNN(object):
     def time_steps(self):
         return self.input.get_shape()[1].value
 
-    def train(self, session, documents, learning_rate, keep_probability):
+    def train(self, session, training_set, learning_rate, keep_probability):
         epoch_cost = epoch_iteration = state = None
         session.run(self.initialize)
-        for epoch, new_epoch, new_document, context, target in epochs(documents, self.time_steps, self.batch_size):
+        for epoch, new_epoch, new_document, context, target in epochs(training_set, self.time_steps, self.batch_size):
             if new_epoch:
                 epoch_cost = 0
                 epoch_iteration = 0

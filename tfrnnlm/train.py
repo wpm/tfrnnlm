@@ -6,22 +6,22 @@ from tfrnnlm.rnn import RNN
 
 
 def train_model(args):
-    if args.model is None:
+    if args.model_directory is not None:
+        summary_directory = os.path.join(args.model, "summary")
+    else:
         logger.warn("Not saving a model.")
+        summary_directory = None
     logger.info(args.vocabulary)
     with tf.Graph().as_default():
-        model = RNN(args.init, 5, args.batch_size, args.time_steps, args.vocabulary,
+        model = RNN(args.init, args.max_gradient,
+                    args.batch_size, args.time_steps, len(args.vocabulary),
                     args.hidden_units, args.layers)
         with tf.Session() as session:
-            if args.model is not None:
-                summary_directory = os.path.join(args.model, "summary")
-            else:
-                summary_directory = None
             epoch = iteration = None
             train_summary = summary_writer(summary_directory, session.graph)
             try:
                 for epoch, iteration, train_perplexity, summary in \
-                        model.train(session, args.train, args.learning_rate, args.keep):
+                        model.train(session, args.training_set, args.learning_rate, args.keep_probability):
                     if iteration % args.logging_interval == 0:
                         logger.info(
                             "Epoch %d, Iteration %d, training perplexity %0.4f" % (epoch, iteration, train_perplexity))
