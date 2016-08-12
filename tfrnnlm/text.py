@@ -125,12 +125,57 @@ class IndexedVocabulary(object):
         return (self.index(token) for token in tokens)
 
 
+def epochs(documents, time_steps, batch_size, max_epochs=None):
+    """
+    Enumerator over documents, yielding pairs of batches of the data where batches are arrays with the shape
+    (batch_size x time_steps). The second element of the pair is equal to the first one shifted ahead one place.
+    Pad with zeros at the end of each document as necessary.
+
+    Documents are sequences of integers. By definition, the sequence of integers in one document is independent of the
+    ones in the previous document.
+
+    This will run for the specified number of epochs. If max_epochs is not specified, it will run forever.
+
+    :param documents: documents to enumerate over
+    :type documents: sequence of numpy.array of int
+    :param time_steps: number of time steps to unroll
+    :type time_steps: int
+    :param batch_size: number of unrolled sequences to combine into a single batch
+    :type batch_size: int
+    :param max_epochs: maximum number of epochs
+    :type max_epochs: int or None
+    :return: epoch number, whether this is a new epoch and/or new document, batch context and target
+    :rtype: iterator of (int, bool, bool, numpy.array, numpy.array)
+    """
+    epoch = 1
+    while True:
+        if max_epochs is not None and epoch > max_epochs:
+            break
+        new_epoch = True
+        for document in documents:
+            new_document = True
+            for context, target in language_model_batches(document, time_steps, batch_size):
+                yield epoch, new_epoch, new_document, context, target
+                new_epoch = False
+                new_document = False
+        epoch += 1
+
+
 def language_model_batches(data, time_steps, batch_size):
     """
-    Yield pairs of minibatches of the data where minibatches are arrays with the shape (batch_size x time_steps). The
+    Yield pairs of batches of the data where batches are arrays with the shape (batch_size x time_steps). The
     second element of the pair is equal to the first one shifted ahead one place. Pad with zeros as necessary.
 
-    Each minibatch may be used as input for tf.nn.dynamic_rnn.
+    Each batch may be used as input for tf.nn.dynamic_rnn.
+
+    :param data: data to emit as language model batches
+    :type data: numpy.array of int
+    :param time_steps: number of time steps to unroll
+    :type time_steps: int
+    :param batch_size: number of unrolled sequences to combine into a single batch
+    :type batch_size: int
+    :return: pairs of language model contexts and their following targets
+    :rtype: iterator of (numpy.array, numpy.array)
     """
     total_time = len(data)
 

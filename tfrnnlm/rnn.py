@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from tfrnnlm import logger
-from tfrnnlm.text import language_model_batches
+from tfrnnlm.text import epochs
 
 
 class RNN(object):
@@ -76,44 +76,39 @@ class RNN(object):
             summary_directory = None
 
         with tf.Session() as session:
+            state = epoch = iteration = epoch_cost = epoch_iteration = None
             train_summary = summary_writer(summary_directory, session.graph)
             session.run(self.initialize)
-            epoch = 1
-            iteration = None
             try:
-                while True:
-                    epoch_cost = 0
-                    epoch_iteration = 0
-                    for document in documents:
+                for epoch, new_epoch, new_document, context, target in epochs(documents,
+                                                                              self.time_steps, self.batch_size,
+                                                                              max_epochs):
+                    if new_epoch:
+                        epoch_cost = 0
+                        epoch_iteration = 0
+                    if new_document:
                         state = session.run(self.reset_state)
-                        for context, target in language_model_batches(document, self.time_steps, self.batch_size):
-                            _, cost, state, summary, iteration = session.run(
-                                [self.train, self.cost, self.next_state, self.summary, self.iteration],
-                                feed_dict={
-                                    self.input: context,
-                                    self.targets: target,
-                                    self.state: state,
-                                    self.learning_rate: learning_rate,
-                                    self.keep_probability: keep_probability
-                                })
-                            epoch_cost += cost
-                            epoch_iteration += self.time_steps
-                            if (iteration - 1) % logging_interval == 0:
-                                logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
-                                    epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
-                                train_summary.add_summary(summary, global_step=iteration)
-                            if max_iterations is not None and iteration > max_iterations:
-                                raise StopTrainingException()
-                    epoch += 1
-                    if max_epochs is not None and epoch > max_epochs:
-                        raise StopTrainingException()
-            except (StopTrainingException, KeyboardInterrupt):
-                logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
-                train_summary.flush()
-
-
-class StopTrainingException(Exception):
-    pass
+                    _, cost, state, summary, iteration = session.run(
+                        [self.train, self.cost, self.next_state, self.summary, self.iteration],
+                        feed_dict={
+                            self.input: context,
+                            self.targets: target,
+                            self.state: state,
+                            self.learning_rate: learning_rate,
+                            self.keep_probability: keep_probability
+                        })
+                    epoch_cost += cost
+                    epoch_iteration += self.time_steps
+                    if iteration % logging_interval == 0:
+                        logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
+                            epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
+                        train_summary.add_summary(summary, global_step=iteration)
+                    if max_iterations is not None and iteration > max_iterations:
+                        break
+            except KeyboardInterrupt:
+                pass
+            logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
+            train_summary.flush()
 
 
 def summary_writer(summary_directory, graph):
