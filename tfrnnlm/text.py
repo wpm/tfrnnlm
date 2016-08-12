@@ -126,10 +126,32 @@ class IndexedVocabulary(object):
 
 
 def language_model_batches(data, time_steps, batch_size):
+    """
+    Yield pairs of minibatches of the data where minibatches are arrays with the shape (batch_size x time_steps). The
+    second element of the pair is equal to the first one shifted ahead one place. Pad with zeros as necessary.
+
+    Each minibatch may be used as input for tf.nn.dynamic_rnn.
+    """
     total_time = len(data)
 
     def unrolled_sequence_pairs():
+        """
+        Yield a pair of sequences. The first element of the pair subsequence of the data of length time_steps in order.
+        The second element is the first element shifted ahead by one. Pad with zeros as necessary.
+
+        e.g. data = [1, 2, 3], time_steps = 2 yields
+
+            ([1, 2], [2, 3])
+            ([2, 3], [3, 0])
+            ([3, 0], [0, 0])
+        """
+
         def unrolled_sequences():
+            """
+            Yield every subsequence of the data of length time_steps in order, padding the end with zeros.
+
+            e.g. data = [1, 2, 3], time_steps = 2 yields [1, 2], [2, 3], [3, 0]
+            """
             for i in range(total_time):
                 batch = data[i:i + time_steps]
                 batch = np.pad(batch, (0, time_steps - len(batch)), mode="constant")

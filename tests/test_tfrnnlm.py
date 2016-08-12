@@ -70,7 +70,9 @@ class TestIndexing(TestCase):
 
 class TestBatches(TestCase):
     def test_batches(self):
-        lm_batches = list(language_model_batches([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], time_steps=3, batch_size=4))
+        lm_batches = language_model_batches([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], time_steps=3, batch_size=4)
+        self.assertIsInstance(lm_batches, collections.Iterable)
+        lm_batches = list(lm_batches)
         self.assertEquals(len(lm_batches), 3)
         # Batch 0
         np.testing.assert_equal(lm_batches[0][0], np.array([[0, 1, 2],
