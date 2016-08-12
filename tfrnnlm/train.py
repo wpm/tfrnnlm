@@ -10,5 +10,7 @@ def train_model(args):
     with tf.Graph().as_default():
         model = RNN(args.init, 5, args.batch_size, args.time_steps, args.vocabulary,
                     args.hidden_units, args.layers)
-        model.train_model(args.train, args.learning_rate, args.keep, args.model, args.logging_interval,
-                          args.max_epochs, args.max_iterations)
+        with tf.Session() as session:
+            model.train(session, args.train, args.learning_rate, args.keep,
+                        args.model, args.logging_interval, args.validation_interval,
+                        args.max_epochs, args.max_iterations)

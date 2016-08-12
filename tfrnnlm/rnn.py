@@ -54,8 +54,9 @@ class RNN(object):
             self.gradients, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tf.trainable_variables()),
                                                        max_gradient, name="clip_gradients")
             optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
-            self.train = optimizer.apply_gradients(zip(self.gradients, tf.trainable_variables()), name="train",
-                                                   global_step=self.iteration)
+            self.train_step = optimizer.apply_gradients(zip(self.gradients, tf.trainable_variables()),
+                                                        name="train_step",
+                                                        global_step=self.iteration)
 
         self.initialize = tf.initialize_all_variables()
         self.summary = tf.merge_all_summaries()
@@ -68,47 +69,64 @@ class RNN(object):
     def time_steps(self):
         return self.input.get_shape()[1].value
 
-    def train_model(self, documents, learning_rate, keep_probability, model_directory, logging_interval,
-                    max_epochs=None, max_iterations=None):
+    def train(self, session, documents, learning_rate, keep_probability,
+              model_directory, logging_interval, validation_interval,
+              max_epochs=None, max_iterations=None):
         if model_directory is not None:
             summary_directory = os.path.join(model_directory, "summary")
         else:
             summary_directory = None
+        state = epoch = iteration = epoch_cost = epoch_iteration = None
+        train_summary = summary_writer(summary_directory, session.graph)
+        session.run(self.initialize)
+        try:
+            for epoch, new_epoch, new_document, context, target in epochs(documents,
+                                                                          self.time_steps, self.batch_size,
+                                                                          max_epochs):
+                if new_epoch:
+                    epoch_cost = 0
+                    epoch_iteration = 0
+                if new_document:
+                    state = session.run(self.reset_state)
+                _, cost, state, summary, iteration = session.run(
+                    [self.train_step, self.cost, self.next_state, self.summary, self.iteration],
+                    feed_dict={
+                        self.input: context,
+                        self.targets: target,
+                        self.state: state,
+                        self.learning_rate: learning_rate,
+                        self.keep_probability: keep_probability
+                    })
+                epoch_cost += cost
+                epoch_iteration += self.time_steps
+                if iteration % logging_interval == 0:
+                    logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
+                        epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
+                    train_summary.add_summary(summary, global_step=iteration)
+                if validation_interval is not None and iteration % validation_interval == 0:
+                    pass
+                if max_iterations is not None and iteration > max_iterations:
+                    break
+        except KeyboardInterrupt:
+            pass
+        logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
+        train_summary.flush()
 
-        with tf.Session() as session:
-            state = epoch = iteration = epoch_cost = epoch_iteration = None
-            train_summary = summary_writer(summary_directory, session.graph)
-            session.run(self.initialize)
-            try:
-                for epoch, new_epoch, new_document, context, target in epochs(documents,
-                                                                              self.time_steps, self.batch_size,
-                                                                              max_epochs):
-                    if new_epoch:
-                        epoch_cost = 0
-                        epoch_iteration = 0
-                    if new_document:
-                        state = session.run(self.reset_state)
-                    _, cost, state, summary, iteration = session.run(
-                        [self.train, self.cost, self.next_state, self.summary, self.iteration],
-                        feed_dict={
-                            self.input: context,
-                            self.targets: target,
-                            self.state: state,
-                            self.learning_rate: learning_rate,
-                            self.keep_probability: keep_probability
-                        })
-                    epoch_cost += cost
-                    epoch_iteration += self.time_steps
-                    if iteration % logging_interval == 0:
-                        logger.info("Epoch %d, Iteration %d, training perplexity %0.4f" % (
-                            epoch, iteration, np.exp(epoch_cost / epoch_iteration)))
-                        train_summary.add_summary(summary, global_step=iteration)
-                    if max_iterations is not None and iteration > max_iterations:
-                        break
-            except KeyboardInterrupt:
-                pass
-            logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
-            train_summary.flush()
+    def test(self, session, documents):
+        state = session.run(self.reset_state)
+        epoch_cost = epoch_iteration = 0
+        for _, __, ___, context, target in epochs(documents, self.time_steps, self.batch_size, 1):
+            _, cost, state, summary, iteration = session.run(
+                [self.train_step, self.cost, self.next_state, self.summary, self.iteration],
+                feed_dict={
+                    self.input: context,
+                    self.targets: target,
+                    self.state: state,
+                    self.keep_probability: 1
+                })
+            epoch_cost += cost
+            epoch_iteration += self.time_steps
+        return np.exp(epoch_cost / epoch_iteration)
 
 
 def summary_writer(summary_directory, graph):

@@ -43,6 +43,8 @@ def main():
     train.add_argument("--max-iterations", type=int, help="number of training iterations to run")
     train.add_argument("--logging-interval", type=int, default=10,
                        help="log and write summary after this many iterations")
+    train.add_argument("--validation-interval", type=int,
+                       help="calculate validation set perplexity after this many iterations")
     train.add_argument("--max-epochs", type=int, default=6, help="number of training epochs to run")
     train.add_argument("--learning-rate", type=float, default=1.0, help="training learning rate")
     train.add_argument("--init", type=float, default=0.05, help="random initial absolute value range")
