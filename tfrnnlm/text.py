@@ -179,50 +179,11 @@ def language_model_batches(data, time_steps, batch_size):
     :return: pairs of language model contexts and their following targets
     :rtype: iterator of (numpy.array, numpy.array)
     """
-    total_time = len(data)
-
-    def unrolled_sequence_pairs():
-        """
-        Yield a pair of sequences. The first element of the pair subsequence of the data of length time_steps in order.
-        The second element is the first element shifted ahead by one. Pad with zeros as necessary.
-
-        e.g. data = [1, 2, 3], time_steps = 2 yields
-
-            ([1, 2], [2, 3])
-            ([2, 3], [3, 0])
-            ([3, 0], [0, 0])
-        """
-
-        def unrolled_sequences():
-            """
-            Yield every subsequence of the data of length time_steps in order, padding the end with zeros.
-
-            e.g. data = [1, 2, 3], time_steps = 2 yields [1, 2], [2, 3], [3, 0]
-            """
-            for i in range(total_time):
-                batch = data[i:i + time_steps]
-                batch = np.pad(batch, (0, time_steps - len(batch)), mode="constant")
-                yield batch
-
-        prev = None
-        for unrolled_sequence in unrolled_sequences():
-            if prev is not None:
-                yield prev, unrolled_sequence
-            prev = unrolled_sequence
-        pad = np.zeros(time_steps, dtype=int)
-        yield prev, pad
-        extra = total_time % batch_size
-        for _ in range(extra):
-            yield pad, pad
-
-    contexts = []
-    targets = []
-    for context, target in unrolled_sequence_pairs():
-        contexts += [context]
-        targets += [target]
-        if len(contexts) == batch_size:
-            contexts = np.concatenate(contexts).reshape(-1, time_steps)
-            targets = np.concatenate(targets).reshape(-1, time_steps)
-            yield contexts, targets
-            contexts = []
-            targets = []
+    padded_data = np.pad(data, (0, (batch_size * time_steps)), mode="constant")
+    xs_index = np.zeros((batch_size, time_steps), dtype=int)
+    for i in range(batch_size):
+        for j in range(time_steps):
+            xs_index[i, j] = i + j
+    ys_index = xs_index + 1
+    for i in range(0, len(data), batch_size):
+        yield [padded_data[xs_index + i], padded_data[ys_index + i]]
