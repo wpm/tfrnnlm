@@ -4,7 +4,8 @@ from unittest import TestCase
 
 import numpy as np
 from tfrnnlm.prepare_data import vocabulary_from_documents
-from tfrnnlm.text import IndexedVocabulary, language_model_batches, WhitespaceWordTokenization, PennTreebankTokenization
+from tfrnnlm.text import IndexedVocabulary, WhitespaceWordTokenization, PennTreebankTokenization, \
+    language_model_batches
 
 
 class TestTokenization(TestCase):
@@ -70,38 +71,26 @@ class TestIndexing(TestCase):
 
 class TestBatches(TestCase):
     def test_batches(self):
-        lm_batches = language_model_batches([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], time_steps=3, batch_size=4)
-        self.assertIsInstance(lm_batches, collections.Iterable)
-        lm_batches = list(lm_batches)
-        self.assertEquals(len(lm_batches), 3)
-        # Batch 0
-        np.testing.assert_equal(lm_batches[0][0], np.array([[0, 1, 2],
-                                                            [1, 2, 3],
-                                                            [2, 3, 4],
-                                                            [3, 4, 5]]
-                                                           ))
-        np.testing.assert_equal(lm_batches[0][1], np.array([[1, 2, 3],
-                                                            [2, 3, 4],
-                                                            [3, 4, 5],
-                                                            [4, 5, 6]]
-                                                           ))
-        # Batch 1
-        np.testing.assert_equal(lm_batches[1][0], np.array([[4, 5, 6],
-                                                            [5, 6, 7],
-                                                            [6, 7, 8],
-                                                            [7, 8, 9]]
-                                                           ))
-        np.testing.assert_equal(lm_batches[1][1], np.array([[5, 6, 7],
-                                                            [6, 7, 8],
-                                                            [7, 8, 9],
-                                                            [8, 9, 0]]))
-        # Batch 2
-        np.testing.assert_equal(lm_batches[2][0], np.array([[8, 9, 0],
-                                                            [9, 0, 0],
-                                                            [0, 0, 0],
-                                                            [0, 0, 0]]
-                                                           ))
-        np.testing.assert_equal(lm_batches[2][1], np.array([[9, 0, 0],
-                                                            [0, 0, 0],
-                                                            [0, 0, 0],
-                                                            [0, 0, 0]]))
+        batches = language_model_batches(np.arange(20), time_steps=3, batch_size=4)
+        self.assertIsInstance(batches, collections.Iterable)
+        np.testing.assert_equal(list(batches),
+                                [
+                                    # Batch 0
+                                    (np.array([[0, 1, 2],
+                                               [3, 4, 5],
+                                               [6, 7, 8],
+                                               [9, 10, 11]]),
+                                     np.array([[1, 2, 3],
+                                               [4, 5, 6],
+                                               [7, 8, 9],
+                                               [10, 11, 12]])),
+                                    # Batch 1
+                                    (np.array([[12, 13, 14],
+                                               [15, 16, 17],
+                                               [18, 19, 0],
+                                               [0, 0, 0]]),
+                                     np.array([[13, 14, 15],
+                                               [16, 17, 18],
+                                               [19, 0, 0],
+                                               [0, 0, 0]]))
+                                ])

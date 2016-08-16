@@ -165,8 +165,10 @@ def epochs(documents, time_steps, batch_size, max_epochs=None):
 
 def language_model_batches(data, time_steps, batch_size):
     """
-    Yield pairs of batches of the data where batches are arrays with the shape (batch_size x time_steps). The
-    second element of the pair is equal to the first one shifted ahead one place. Pad with zeros as necessary.
+    Arranges a sequence of data into a form for use in batched language model training. This returns pairs of arrays.
+    The first is the language model context, the second is the context. The data is mapped into the context in order
+    in arrays with the shape (batch_size x time_steps). The target is the same shifted ahead by a single time step. The
+    end of the data is padded with zeros as necessary.
 
     Each batch may be used as input for tf.nn.dynamic_rnn.
 
@@ -176,14 +178,19 @@ def language_model_batches(data, time_steps, batch_size):
     :type time_steps: int
     :param batch_size: number of unrolled sequences to combine into a single batch
     :type batch_size: int
-    :return: pairs of language model contexts and their following targets
-    :rtype: iterator of (numpy.array, numpy.array)
+    :return: batches of contexts and their targets
+    :rtype: iterator over (numpy.array, numpy.array)
     """
-    padded_data = np.pad(data, (0, (batch_size * time_steps)), mode="constant")
-    xs_index = np.zeros((batch_size, time_steps), dtype=int)
-    for i in range(batch_size):
-        for j in range(time_steps):
-            xs_index[i, j] = i + j
-    ys_index = xs_index + 1
-    for i in range(0, len(data), batch_size):
-        yield [padded_data[xs_index + i], padded_data[ys_index + i]]
+    # Divide the data up into batches of size time_steps * batch_size.
+    n = len(data)
+    m = time_steps * batch_size
+    # Pad the end of the data with zeros to make its length a multiple of time_steps * batch_size, then add one
+    # additional padding zero for the targets time shift.
+    p = [(n + i) % m for i in range(m)].index(0)
+    padded_data = np.pad(data, (0, (p + 1)), mode="constant")
+    instances = np.math.ceil((len(padded_data) - 1) / time_steps)
+    # Context and targets are arrays of shape (k x batch_size x time_steps).
+    xs = padded_data[:-1].reshape(instances // batch_size, batch_size, time_steps)
+    ys = padded_data[1:].reshape(instances // batch_size, batch_size, time_steps)
+    # Enumerate over the batches.
+    return zip(xs, ys)
