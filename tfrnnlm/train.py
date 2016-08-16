@@ -13,6 +13,10 @@ def train_model(args):
     else:
         logger.warn("Not saving a model.")
     logger.info(args.vocabulary)
+    # Optionally downsample the size of the documents.
+    if args.sample is not None:
+        args.training_set = [document[:int(len(document) * args.sample)] for document in args.training_set]
+        args.validation_set = [document[:int(len(document) * args.sample)] for document in args.validation_set]
     with tf.Graph().as_default():
         model = RNN(args.init, args.max_gradient,
                     args.batch_size, args.time_steps, len(args.vocabulary),
@@ -31,6 +35,7 @@ def train_model(args):
                         validation_perplexity = model.test(session, args.validation_set)
                         logger.info("Epoch %d, Iteration %d, validation perplexity %0.4f" %
                                     (epoch, iteration, validation_perplexity))
+                        epoch += 1
                     if args.max_iterations is not None and iteration > args.max_iterations:
                         break
                     if args.max_epochs is not None and epoch > args.max_epochs:

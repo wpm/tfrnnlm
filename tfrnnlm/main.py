@@ -39,7 +39,8 @@ def main():
     train.add_argument("--batch-size", type=int, default=20, help="training size batch")
     train.add_argument("--hidden-units", type=int, default=650, help="number of hidden units in the RNN")
     train.add_argument("--layers", type=int, default=2, help="number of RNN layers")
-    train.add_argument("--keep-probability", type=float, default=0.5, help="probability to keep a cell in a dropout layer")
+    train.add_argument("--keep-probability", type=float, default=0.5,
+                       help="probability to keep a cell in a dropout layer")
     train.add_argument("--max-gradient", type=float, default=5, help="value to clip gradients to")
     train.add_argument("--max-iterations", type=int, help="number of training iterations to run")
     train.add_argument("--logging-interval", type=int, default=10,
@@ -47,6 +48,7 @@ def main():
     train.add_argument("--max-epochs", type=int, default=6, help="number of training epochs to run")
     train.add_argument("--learning-rate", type=float, default=1.0, help="training learning rate")
     train.add_argument("--init", type=float, default=0.05, help="random initial absolute value range")
+    train.add_argument("--sample", type=float, help="only use this much of the data sets")
     train.set_defaults(func=train_model)
 
     sample = subparsers.add_parser("sample", description="Sample text from a RNN model.", parents=[shared],
