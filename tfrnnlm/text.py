@@ -3,7 +3,6 @@ from collections import Counter
 from itertools import takewhile
 
 import numpy as np
-from tfrnnlm import logger
 
 
 class WhitespaceWordTokenization(object):
@@ -145,8 +144,9 @@ def epochs(documents, time_steps, batch_size, max_epochs=None):
     :type batch_size: int
     :param max_epochs: maximum number of epochs
     :type max_epochs: int or None
-    :return: epoch number, whether this is a new epoch and/or new document, batch context and target
-    :rtype: iterator of (int, bool, bool, numpy.array, numpy.array)
+    :return: epoch number, proportion of batches complete, whether this is a new epoch and/or new document, batch
+    context and target
+    :rtype: iterator of (int, float, bool, bool, numpy.array, numpy.array)
     """
     epoch = 1
     while True:
@@ -155,8 +155,9 @@ def epochs(documents, time_steps, batch_size, max_epochs=None):
         new_epoch = True
         for document in documents:
             new_document = True
-            for context, target in language_model_batches(document, time_steps, batch_size):
-                yield epoch, new_epoch, new_document, context, target
+            n, batches = language_model_batches(document, time_steps, batch_size)
+            for i, (context, target) in enumerate(batches):
+                yield epoch, i / n, new_epoch, new_document, context, target
                 new_epoch = False
                 new_document = False
         epoch += 1
@@ -177,8 +178,8 @@ def language_model_batches(data, time_steps, batch_size):
     :type time_steps: int
     :param batch_size: number of unrolled sequences to combine into a single batch
     :type batch_size: int
-    :return: batches of contexts and their targets
-    :rtype: iterator over (numpy.array, numpy.array)
+    :return: the number of batches and batches of contexts and their targets
+    :rtype: int, iterator over (numpy.array, numpy.array)
     """
     # Divide the data up into batches of size time_steps * batch_size.
     n = len(data)
@@ -191,5 +192,5 @@ def language_model_batches(data, time_steps, batch_size):
     # Context and targets are arrays of shape (k x batch_size x time_steps).
     xs = padded_data[:-1].reshape(instances // batch_size, batch_size, time_steps)
     ys = padded_data[1:].reshape(instances // batch_size, batch_size, time_steps)
-    # Enumerate over the batches.
-    return zip(xs, ys)
+    # Number of batches and an enumerator over them.
+    return len(xs), zip(xs, ys)

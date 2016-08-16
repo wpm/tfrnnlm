@@ -19,9 +19,9 @@ def train_model(args):
         args.training_set = [document[:int(len(document) * args.sample)] for document in args.training_set]
         args.validation_set = [document[:int(len(document) * args.sample)] for document in args.validation_set]
     training_epoch_size = sum(len(document) for document in args.training_set)
-    logger.info("Training epoch size %d" % training_epoch_size)
+    logger.info("Training epoch size %d tokens" % training_epoch_size)
     if args.validation_set is not None:
-        logger.info("Validation epoch size %d" % sum(len(document) for document in args.validation_set))
+        logger.info("Validation epoch size %d tokens" % sum(len(document) for document in args.validation_set))
     # Run training.
     with tf.Graph().as_default():
         model = RNN(args.init, args.max_gradient,
@@ -31,15 +31,16 @@ def train_model(args):
             epoch = iteration = None
             train_summary = summary_writer(summary_directory, session.graph)
             try:
-                for epoch, new_epoch, iteration, train_perplexity, summary in \
+                for epoch, complete, new_epoch, iteration, train_perplexity, summary in \
                         model.train(session, args.training_set, args.learning_rate, args.keep_probability):
                     if iteration % args.logging_interval == 0:
                         logger.info(
-                            "Epoch %d, Iteration %d, training perplexity %0.4f" % (epoch, iteration, train_perplexity))
+                            "Epoch %d, Complete %0.3f, Batch %d, training perplexity %0.4f" %
+                            (epoch, complete, iteration, train_perplexity))
                         train_summary.add_summary(summary, global_step=iteration)
                     if new_epoch and args.validation_set and iteration > 1:
                         validation_perplexity = model.test(session, args.validation_set)
-                        logger.info("Epoch %d, Iteration %d, validation perplexity %0.4f" %
+                        logger.info("Epoch %d, Batch %d, validation perplexity %0.4f" %
                                     (epoch, iteration, validation_perplexity))
                     if args.max_iterations is not None and iteration > args.max_iterations:
                         break
