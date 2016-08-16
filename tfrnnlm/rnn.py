@@ -42,9 +42,11 @@ class RNN(object):
             self.loss = tf.nn.seq2seq.sequence_loss_by_example([self.predicted], [tf.concat(-1, self.targets)],
                                                                [tf.ones(batch_size * time_steps)])
             self.cost = tf.div(tf.reduce_sum(self.loss), batch_size, name="cost")
-            tf.scalar_summary(self.cost.op.name, self.cost)
 
         with tf.name_scope("Train"):
+            self.validation_perplexity = tf.Variable(dtype=tf.float32, initial_value=float("inf"), trainable=False,
+                                                     name="validation_perplexity")
+            tf.scalar_summary(self.validation_perplexity.op.name, self.validation_perplexity)
             self.iteration = tf.Variable(0, name="iteration", trainable=False)
             self.gradients, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tf.trainable_variables()),
                                                        max_gradient, name="clip_gradients")
@@ -67,14 +69,15 @@ class RNN(object):
     def train(self, session, training_set, learning_rate, keep_probability):
         epoch_cost = epoch_iteration = state = None
         session.run(self.initialize)
-        for epoch, complete, new_epoch, new_document, context, target in epochs(training_set, self.time_steps, self.batch_size):
+        for epoch, complete, new_epoch, new_document, context, target in epochs(training_set, self.time_steps,
+                                                                                self.batch_size):
             if new_epoch:
                 epoch_cost = 0
                 epoch_iteration = 0
             if new_document:
                 state = session.run(self.reset_state)
-            _, cost, state, summary, iteration = session.run(
-                [self.train_step, self.cost, self.next_state, self.summary, self.iteration],
+            _, cost, state, iteration = session.run(
+                [self.train_step, self.cost, self.next_state, self.iteration],
                 feed_dict={
                     self.input: context,
                     self.targets: target,
@@ -84,7 +87,7 @@ class RNN(object):
                 })
             epoch_cost += cost
             epoch_iteration += self.time_steps
-            yield epoch, complete, new_epoch, iteration, np.exp(epoch_cost / epoch_iteration), summary
+            yield epoch, complete, new_epoch, iteration, np.exp(epoch_cost / epoch_iteration)
 
     def test(self, session, documents):
         state = None
@@ -102,3 +105,7 @@ class RNN(object):
             epoch_cost += cost
             epoch_iteration += self.time_steps
         return np.exp(epoch_cost / epoch_iteration)
+
+    def store_validation_perplexity(self, session, validation_perplexity):
+        session.run(self.validation_perplexity.assign(validation_perplexity))
+        return session.run(self.summary)

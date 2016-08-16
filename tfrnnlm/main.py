@@ -34,7 +34,8 @@ def main():
     train.add_argument("training_set", nargs="+", type=np.load, help="files containing training data")
     train.add_argument("--validation-set", nargs="+", type=np.load, default=[], help="files containing validation data")
     train.add_argument("--model-directory", type=create_new_directory, help="directory to which to write the model")
-    train.add_argument("--summary", action="store_true", help="create a summary for the training")
+    train.add_argument("--summary-directory", type=create_new_directory,
+                       help="directory to which to write a training summary")
     train.add_argument("--time-steps", type=int, default=20, help="training unrolled time steps")
     train.add_argument("--batch-size", type=int, default=20, help="training size batch")
     train.add_argument("--hidden-units", type=int, default=650, help="number of hidden units in the RNN")
