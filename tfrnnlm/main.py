@@ -14,6 +14,7 @@ def main():
     parser = argparse.ArgumentParser(description="tfrnnlm version %s" % __version__, fromfile_prefix_chars='@')
 
     shared = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--version', action='version', version="%(prog)s " + __version__)
     shared.add_argument("--log", default="INFO", help="logging level")
 
     subparsers = parser.add_subparsers(title="TensorFlow RNN Language Model")
