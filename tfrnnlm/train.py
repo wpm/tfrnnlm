@@ -12,9 +12,9 @@ def train_model(args):
         args.training_set = [document[:int(len(document) * args.sample)] for document in args.training_set]
         args.validation_set = [document[:int(len(document) * args.sample)] for document in args.validation_set]
     training_epoch_size = sum(len(document) for document in args.training_set)
-    logger.info("Training epoch size %d tokens" % training_epoch_size)
+    logger.info("Training set: %d tokens" % training_epoch_size)
     if args.validation_set is not None:
-        logger.info("Validation epoch size %d tokens" % sum(len(document) for document in args.validation_set))
+        logger.info("Validation set: %d tokens" % sum(len(document) for document in args.validation_set))
     # Run training.
     with tf.Graph().as_default():
         model = RNN(args.init, args.max_gradient,
@@ -28,12 +28,12 @@ def train_model(args):
                         model.train(session, args.training_set, args.learning_rate, args.keep_probability):
                     if iteration % args.logging_interval == 0:
                         logger.info(
-                            "Epoch %d, Complete %0.3f, Batch %d, training perplexity %0.4f" %
-                            (epoch, complete, iteration, train_perplexity))
+                            "Epoch %d, Batch %d: Training perplexity %0.4f (%0.3f of epoch)" %
+                            (epoch, iteration, train_perplexity, complete))
                     if new_epoch and args.validation_set and iteration > 1:
                         validation_perplexity = model.test(session, args.validation_set)
                         summary = model.store_validation_perplexity(session, validation_perplexity)
-                        logger.info("Epoch %d, Batch %d, validation perplexity %0.4f" %
+                        logger.info("Epoch %d, Batch %d: Validation perplexity %0.4f" %
                                     (epoch, iteration, validation_perplexity))
                         train_summary.add_summary(summary, global_step=iteration)
                     if args.max_iterations is not None and iteration > args.max_iterations:
