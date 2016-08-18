@@ -43,7 +43,6 @@ def train_model(args):
             except KeyboardInterrupt:
                 pass
             logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
-            train_summary.flush()
             train_summary.close()
 
 
@@ -53,6 +52,9 @@ def summary_writer(summary_directory, graph):
             pass
 
         def flush(self):
+            pass
+
+        def close(self):
             pass
 
     if summary_directory is not None:
