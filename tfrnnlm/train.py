@@ -30,12 +30,16 @@ def train_model(args):
                         logger.info(
                             "Epoch %d, Batch %d: Training perplexity %0.4f (%0.3f of epoch)" %
                             (epoch, iteration, train_perplexity, complete))
-                    if new_epoch and args.validation_set and iteration > 1:
-                        validation_perplexity = model.test(session, args.validation_set)
-                        summary = model.store_validation_perplexity(session, validation_perplexity)
-                        logger.info("Epoch %d, Batch %d: Validation perplexity %0.4f" %
-                                    (epoch, iteration, validation_perplexity))
-                        train_summary.add_summary(summary, global_step=iteration)
+                    if new_epoch:
+                        if iteration > 1:
+                            logger.info("Epoch %d: Training perplexity %0.4f" % (epoch, train_perplexity))
+                            model.store_training_epoch_perplexity(session, train_perplexity)
+                        if args.validation_set and iteration > 1:
+                            validation_perplexity = model.test(session, args.validation_set)
+                            model.store_validation_perplexity(session, validation_perplexity)
+                            logger.info("Epoch %d, Batch %d: Validation perplexity %0.4f" %
+                                        (epoch, iteration, validation_perplexity))
+                        train_summary.add_summary(session.run(model.summary), global_step=iteration)
                     if args.max_iterations is not None and iteration > args.max_iterations:
                         break
                     if args.max_epochs is not None and epoch > args.max_epochs:

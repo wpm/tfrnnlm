@@ -47,7 +47,10 @@ class RNN(object):
             self.validation_perplexity = tf.Variable(dtype=tf.float32, initial_value=float("inf"), trainable=False,
                                                      name="validation_perplexity")
             tf.scalar_summary(self.validation_perplexity.op.name, self.validation_perplexity)
-            self.iteration = tf.Variable(0, name="iteration", trainable=False)
+            self.training_epoch_perplexity = tf.Variable(dtype=tf.float32, initial_value=float("inf"), trainable=False,
+                                                         name="training_epoch_perplexity")
+            tf.scalar_summary(self.training_epoch_perplexity.op.name, self.training_epoch_perplexity)
+            self.iteration = tf.Variable(0, dtype=tf.int64, name="iteration", trainable=False)
             self.gradients, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tf.trainable_variables()),
                                                        max_gradient, name="clip_gradients")
             optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
@@ -108,4 +111,6 @@ class RNN(object):
 
     def store_validation_perplexity(self, session, validation_perplexity):
         session.run(self.validation_perplexity.assign(validation_perplexity))
-        return session.run(self.summary)
+
+    def store_training_epoch_perplexity(self, session, training_perplexity):
+        session.run(self.training_epoch_perplexity.assign(training_perplexity))
