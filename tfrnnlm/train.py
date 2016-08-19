@@ -1,3 +1,6 @@
+import time
+from datetime import timedelta
+
 import tensorflow as tf
 from tfrnnlm import logger
 from tfrnnlm.document_set import DocumentSet
@@ -21,6 +24,7 @@ def train_model(args):
     else:
         validation = None
     # Run training.
+    start_time = time.time()
     with tf.Graph().as_default():
         model = RNN(args.init, args.max_gradient,
                     args.batch_size, args.time_steps, len(args.vocabulary),
@@ -33,3 +37,4 @@ def train_model(args):
                         validation,
                         args.logging_interval,
                         args.summary_directory)
+    logger.info("Total training time %s" % timedelta(seconds=(time.time() - start_time)))
