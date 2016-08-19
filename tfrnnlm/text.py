@@ -2,8 +2,6 @@ import re
 from collections import Counter
 from itertools import takewhile
 
-from tfrnnlm.document_set import language_model_batches
-
 
 class WhitespaceWordTokenization(object):
     """

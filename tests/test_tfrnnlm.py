@@ -3,21 +3,26 @@ import textwrap
 from unittest import TestCase
 
 import numpy as np
-from tfrnnlm.document_set import language_model_batches
+from tfrnnlm.document_set import DocumentSet
 from tfrnnlm.prepare_data import vocabulary_from_documents
+from tfrnnlm.rnn import ExitCriteria, Parameters, Validation
 from tfrnnlm.text import IndexedVocabulary, WhitespaceWordTokenization, PennTreebankTokenization
 
 
 class TestTokenization(TestCase):
     def test_whitespace_word_tokenization(self):
-        tokens = WhitespaceWordTokenization()("\nCall me Ishmael. Some years ago--never mind how long precisely  ")
+        tokenization = WhitespaceWordTokenization()
+        self.assertEqual(str(tokenization), "Whitespace Word Tokenization")
+        tokens = tokenization("\nCall me Ishmael. Some years ago--never mind how long precisely  ")
         self.assertEqual(tokens,
                          ["call", "me", "ishmael", "some", "years", "ago", "never", "mind", "how", "long", "precisely"])
 
     def test_penn_treebank_word_tokenization(self):
         s = textwrap.dedent("""seoul also has instituted effective <unk> procedures to aid these teams she said
 taiwan has improved""")
-        actual = PennTreebankTokenization()(s)
+        tokenization = PennTreebankTokenization()
+        self.assertEqual(str(tokenization), "Penn Treebank Tokenization")
+        actual = tokenization(s)
         self.assertIsInstance(actual, collections.Iterable)
         expected = ["seoul", "also", "has", "instituted", "effective", "<unk>", "procedures", "to", "aid", "these",
                     "teams", "she", "said", "<eos>", "taiwan", "has", "improved", "<eos>"]
@@ -27,6 +32,7 @@ taiwan has improved""")
 class TestIndexing(TestCase):
     def test_full_vocabulary(self):
         v = IndexedVocabulary("the quick brown fox jumped over the lazy dog".split())
+        self.assertEqual(str(v), "Indexed Vocabulary, size 9: None:0 the:1 brown:2 dog:3 fox:4 ...")
         self.assertEqual(set(v.type_to_index.keys()), {"the", "quick", "brown", "fox", "jumped", "over", "lazy", "dog"})
         self.assertEqual(len(v), 9)
 
@@ -69,9 +75,12 @@ class TestIndexing(TestCase):
         self.assertEqual(v.index("zebra"), 6)
 
 
-class TestBatches(TestCase):
+class TestDocumentSet(TestCase):
+    def setUp(self):
+        self.document_set = DocumentSet([np.arange(20), np.arange(13)])
+
     def test_batches(self):
-        batches = language_model_batches(np.arange(20), time_steps=3, batch_size=4)
+        batches = DocumentSet.language_model_batches(np.arange(20), time_steps=3, batch_size=4)
         self.assertIsInstance(batches, collections.Iterable)
         np.testing.assert_equal(list(batches),
                                 [
@@ -94,3 +103,70 @@ class TestBatches(TestCase):
                                                [19, 0, 0],
                                                [0, 0, 0]]))
                                 ])
+
+    def test_document_set_properties(self):
+        self.assertEqual(len(self.document_set), 33)
+        self.assertEqual(str(self.document_set), "2 documents, 33 tokens")
+
+    def test_document_set_epoch(self):
+        batches = self.document_set.epoch(time_steps=3, batch_size=4)
+        self.assertIsInstance(batches, collections.Iterable)
+        np.testing.assert_equal(list(batches),
+                                # Document 1, Batch 1
+                                [(True,
+                                  np.array([[0, 1, 2],
+                                            [3, 4, 5],
+                                            [6, 7, 8],
+                                            [9, 10, 11]]),
+                                  np.array([[1, 2, 3],
+                                            [4, 5, 6],
+                                            [7, 8, 9],
+                                            [10, 11, 12]]),
+                                  0.25),
+                                 # Document 1, Batch 2
+                                 (False,
+                                  np.array([[12, 13, 14],
+                                            [15, 16, 17],
+                                            [18, 19, 0],
+                                            [0, 0, 0]]),
+                                  np.array([[13, 14, 15],
+                                            [16, 17, 18],
+                                            [19, 0, 0],
+                                            [0, 0, 0]]),
+                                  0.5),
+                                 # Document 2, Batch 1
+                                 (True,
+                                  np.array([[0, 1, 2],
+                                            [3, 4, 5],
+                                            [6, 7, 8],
+                                            [9, 10, 11]]),
+                                  np.array([[1, 2, 3],
+                                            [4, 5, 6],
+                                            [7, 8, 9],
+                                            [10, 11, 12]]),
+                                  0.75),
+                                 # Document 2, Batch 2
+                                 (False,
+                                  np.array([[12, 0, 0],
+                                            [0, 0, 0],
+                                            [0, 0, 0],
+                                            [0, 0, 0]]),
+                                  np.array([[0, 0, 0],
+                                            [0, 0, 0],
+                                            [0, 0, 0],
+                                            [0, 0, 0]]),
+                                  1.0)]
+                                )
+
+
+class TestRNN(TestCase):
+    def test_configuration_groups(self):
+        e = ExitCriteria(100, 50)
+        self.assertEqual(e.max_iterations, 100)
+        self.assertEqual(e.max_epochs, 50)
+        p = Parameters(0.01, 0.5)
+        self.assertEqual(p.learning_rate, 0.01)
+        self.assertEqual(p.keep_probability, 0.5)
+        v = Validation(None, None)
+        self.assertEqual(v.interval, None)
+        self.assertEqual(v.validation_set, None)
