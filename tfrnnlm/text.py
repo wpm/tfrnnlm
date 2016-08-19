@@ -2,7 +2,7 @@ import re
 from collections import Counter
 from itertools import takewhile
 
-import numpy as np
+from tfrnnlm.document_set import language_model_batches
 
 
 class WhitespaceWordTokenization(object):
@@ -123,74 +123,3 @@ class IndexedVocabulary(object):
         :rtype: iterable of int
         """
         return (self.index(token) for token in tokens)
-
-
-def epochs(documents, time_steps, batch_size, max_epochs=None):
-    """
-    Enumerator over documents, yielding pairs of batches of the data where batches are arrays with the shape
-    (batch_size x time_steps). The second element of the pair is equal to the first one shifted ahead one place.
-    Pad with zeros at the end of each document as necessary.
-
-    Documents are sequences of integers. By definition, the sequence of integers in one document is independent of the
-    ones in the previous document.
-
-    This will run for the specified number of epochs. If max_epochs is not specified, it will run forever.
-
-    :param documents: documents to enumerate over
-    :type documents: sequence of numpy.array of int
-    :param time_steps: number of time steps to unroll
-    :type time_steps: int
-    :param batch_size: number of unrolled sequences to combine into a single batch
-    :type batch_size: int
-    :param max_epochs: maximum number of epochs
-    :type max_epochs: int or None
-    :return: epoch number, proportion of batches complete, whether this is a new epoch and/or new document, batch
-    context and target
-    :rtype: iterator of (int, float, bool, bool, numpy.array, numpy.array)
-    """
-    epoch = 1
-    while True:
-        if max_epochs is not None and epoch > max_epochs:
-            break
-        new_epoch = True
-        for document in documents:
-            new_document = True
-            n, batches = language_model_batches(document, time_steps, batch_size)
-            for i, (context, target) in enumerate(batches):
-                yield epoch, i / n, new_epoch, new_document, context, target
-                new_epoch = False
-                new_document = False
-        epoch += 1
-
-
-def language_model_batches(data, time_steps, batch_size):
-    """
-    Arranges a sequence of data into a form for use in batched language model training. This returns pairs of arrays.
-    The first is the language model context, the second is the context. The data is mapped into the context in order
-    in arrays with the shape (batch_size x time_steps). The target is the same shifted ahead by a single time step. The
-    end of the data is padded with zeros as necessary.
-
-    Each batch may be used as input for tf.nn.dynamic_rnn.
-
-    :param data: data to emit as language model batches
-    :type data: numpy.array of int
-    :param time_steps: number of time steps to unroll
-    :type time_steps: int
-    :param batch_size: number of unrolled sequences to combine into a single batch
-    :type batch_size: int
-    :return: the number of batches and batches of contexts and their targets
-    :rtype: int, iterator over (numpy.array, numpy.array)
-    """
-    # Divide the data up into batches of size time_steps * batch_size.
-    n = len(data)
-    m = time_steps * batch_size
-    # Pad the end of the data with zeros to make its length a multiple of time_steps * batch_size, then add one
-    # additional padding zero for the targets time shift.
-    p = [(n + i) % m for i in range(m)].index(0)
-    padded_data = np.pad(data, (0, (p + 1)), mode="constant")
-    instances = np.math.ceil((len(padded_data) - 1) / time_steps)
-    # Context and targets are arrays of shape (k x batch_size x time_steps).
-    xs = padded_data[:-1].reshape(instances // batch_size, batch_size, time_steps)
-    ys = padded_data[1:].reshape(instances // batch_size, batch_size, time_steps)
-    # Number of batches and an enumerator over them.
-    return len(xs), zip(xs, ys)

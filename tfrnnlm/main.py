@@ -34,6 +34,7 @@ def main():
     train.add_argument("vocabulary", type=vocabulary, help="indexed vocabulary file")
     train.add_argument("training_set", nargs="+", type=np.load, help="files containing training data")
     train.add_argument("--validation-set", nargs="+", type=np.load, default=[], help="files containing validation data")
+    train.add_argument("--validation-interval", type=int, default=1000, help="how often to run the validation set")
     train.add_argument("--model-directory", type=create_new_directory, help="directory to which to write the model")
     train.add_argument("--summary-directory", type=create_new_directory,
                        help="directory to which to write a training summary")
@@ -45,7 +46,7 @@ def main():
                        help="probability to keep a cell in a dropout layer")
     train.add_argument("--max-gradient", type=float, default=5, help="value to clip gradients to")
     train.add_argument("--max-iterations", type=int, help="number of training iterations to run")
-    train.add_argument("--logging-interval", type=int, default=10,
+    train.add_argument("--logging-interval", type=int, default=100,
                        help="log and write summary after this many iterations")
     train.add_argument("--max-epochs", type=int, default=6, help="number of training epochs to run")
     train.add_argument("--learning-rate", type=float, default=1.0, help="training learning rate")

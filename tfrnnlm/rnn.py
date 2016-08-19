@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from tfrnnlm.text import epochs
+from tfrnnlm import logger
 
 
 class RNN(object):
@@ -69,48 +69,120 @@ class RNN(object):
     def time_steps(self):
         return self.input.get_shape()[1].value
 
-    def train(self, session, training_set, learning_rate, keep_probability):
-        epoch_cost = epoch_iteration = state = None
+    def train(self, session, training_set, parameters, exit_criteria, validation, logging_interval, summary_directory):
+        epoch = 1
+        iteration = 0
+        state = None
+        summary = self.summary_writer(summary_directory, session)
         session.run(self.initialize)
-        for epoch, complete, new_epoch, new_document, context, target in epochs(training_set, self.time_steps,
-                                                                                self.batch_size):
-            if new_epoch:
-                epoch_cost = 0
-                epoch_iteration = 0
-            if new_document:
-                state = session.run(self.reset_state)
-            _, cost, state, iteration = session.run(
-                [self.train_step, self.cost, self.next_state, self.iteration],
-                feed_dict={
-                    self.input: context,
-                    self.targets: target,
-                    self.state: state,
-                    self.learning_rate: learning_rate,
-                    self.keep_probability: keep_probability
-                })
-            epoch_cost += cost
-            epoch_iteration += self.time_steps
-            yield epoch, complete, new_epoch, iteration, np.exp(epoch_cost / epoch_iteration)
+        try:
+            # Enumerate over the training set until exit criteria are met.
+            while True:
+                epoch_cost = epoch_iteration = 0
+                # Enumerate over a single epoch of the training set.
+                for start_document, context, target, complete in training_set.epoch(self.time_steps, self.batch_size):
+                    if start_document:
+                        state = session.run(self.reset_state)
+                    _, cost, state, iteration = session.run(
+                        [self.train_step, self.cost, self.next_state, self.iteration],
+                        feed_dict={
+                            self.input: context,
+                            self.targets: target,
+                            self.state: state,
+                            self.learning_rate: parameters.learning_rate,
+                            self.keep_probability: parameters.keep_probability
+                        })
+                    epoch_cost += cost
+                    epoch_iteration += self.time_steps
+                    if self._interval(iteration, logging_interval):
+                        logger.info("Epoch %d (%0.4f complete), Iteration %d: epoch training perplexity %0.4f" %
+                                    (epoch, complete, iteration, self.perplexity(epoch_cost, epoch_iteration)))
+                    if validation is not None and self._interval(iteration, validation.interval):
+                        validation_perplexity = self.test(session, validation.validation_set)
+                        self.store_validation_perplexity(session, summary, iteration, validation_perplexity)
+                        logger.info("Epoch %d, Iteration %d: validation perplexity %0.4f" %
+                                    (epoch, iteration, validation_perplexity))
+                    if exit_criteria.max_iterations is not None and iteration > exit_criteria.max_iterations:
+                        raise StopTrainingException()
 
-    def test(self, session, documents):
+                self.store_training_epoch_perplexity(session, summary, iteration,
+                                                     self.perplexity(epoch_cost, epoch_iteration))
+                epoch += 1
+                if exit_criteria.max_epochs is not None and epoch > exit_criteria.max_epochs:
+                    raise StopTrainingException()
+        except (StopTrainingException, KeyboardInterrupt):
+            pass
+        logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
+        summary.close()
+
+    def test(self, session, test_set):
         state = None
         epoch_cost = epoch_iteration = 0
-        for _, __, ___, new_document, context, target in epochs(documents, self.time_steps, self.batch_size, 1):
-            if new_document:
+        for start_document, context, target, _ in test_set.epoch(self.time_steps, self.batch_size):
+            if start_document:
                 state = session.run(self.reset_state)
-            cost, state, iteration = session.run([self.cost, self.next_state, self.iteration],
-                                                 feed_dict={
-                                                     self.input: context,
-                                                     self.targets: target,
-                                                     self.state: state,
-                                                     self.keep_probability: 1
-                                                 })
+            cost, state = session.run([self.cost, self.next_state],
+                                      feed_dict={
+                                          self.input: context,
+                                          self.targets: target,
+                                          self.state: state,
+                                          self.keep_probability: 1
+                                      })
             epoch_cost += cost
             epoch_iteration += self.time_steps
-        return np.exp(epoch_cost / epoch_iteration)
+        return self.perplexity(epoch_cost, epoch_iteration)
 
-    def store_validation_perplexity(self, session, validation_perplexity):
+    @staticmethod
+    def _interval(iteration, interval):
+        return interval is not None and iteration > 1 and iteration % interval == 0
+
+    @staticmethod
+    def perplexity(cost, iterations):
+        return np.exp(cost / iterations)
+
+    def store_validation_perplexity(self, session, summary, iteration, validation_perplexity):
         session.run(self.validation_perplexity.assign(validation_perplexity))
+        summary.add_summary(session.run(self.summary), global_step=iteration)
 
-    def store_training_epoch_perplexity(self, session, training_perplexity):
+    def store_training_epoch_perplexity(self, session, summary, iteration, training_perplexity):
         session.run(self.training_epoch_perplexity.assign(training_perplexity))
+        summary.add_summary(session.run(self.summary), global_step=iteration)
+
+    @staticmethod
+    def summary_writer(summary_directory, session):
+        class NullSummaryWriter(object):
+            def add_summary(self, *args, **kwargs):
+                pass
+
+            def flush(self):
+                pass
+
+            def close(self):
+                pass
+
+        if summary_directory is not None:
+            return tf.train.SummaryWriter(summary_directory, session.graph)
+        else:
+            return NullSummaryWriter()
+
+
+class ExitCriteria(object):
+    def __init__(self, max_iterations, max_epochs):
+        self.max_iterations = max_iterations
+        self.max_epochs = max_epochs
+
+
+class Parameters(object):
+    def __init__(self, learning_rate, keep_probability):
+        self.learning_rate = learning_rate
+        self.keep_probability = keep_probability
+
+
+class Validation(object):
+    def __init__(self, interval, validation_set):
+        self.interval = interval
+        self.validation_set = validation_set
+
+
+class StopTrainingException(Exception):
+    pass
