@@ -13,6 +13,7 @@ def main():
     args = parser.parse_args()
 
     if not hasattr(args, "func"):
+        # No top level command was supplied.
         parser.print_usage()
         parser.exit(0)
 
@@ -92,7 +93,7 @@ def new_directory(directory):
     try:
         os.makedirs(directory)
     except FileExistsError:
-        raise argparse.ArgumentError(directory, "The directory %s already exists." % directory)
+        raise argparse.ArgumentError(None, "The directory %s already exists." % directory)
     return directory
 
 

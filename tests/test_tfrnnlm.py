@@ -4,7 +4,7 @@ import shutil
 import sys
 import tempfile
 import textwrap
-from argparse import ArgumentParser, Namespace, ArgumentTypeError
+from argparse import ArgumentParser, Namespace, ArgumentTypeError, ArgumentError
 from unittest import TestCase
 
 import numpy as np
@@ -211,9 +211,16 @@ class TestCommandLine(TestCase):
     def test_invalid_integer(self):
         output_directory = os.path.join(self.directory, "output")
         cmd = "index %s document1 document2 --max-vocabulary=-50000" % output_directory
+        self._command_line_error(ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
+
+    def test_directory_already_exists(self):
+        cmd = "index %s document1 document2 --max-vocabulary=-50000" % self.directory
+        self._command_line_error(ArgumentError, lambda: self.parser.parse_args(cmd.split()))
+
+    def _command_line_error(self, error_type, action):
         with open(os.devnull, "w") as sys.stderr:  # Suppresses error message.
             try:
-                with self.assertRaises(ArgumentTypeError):
-                    self.parser.parse_args(cmd.split())
+                with self.assertRaises(error_type):
+                    action()
             except SystemExit:  # Stops argparse from ending the program
                 pass
