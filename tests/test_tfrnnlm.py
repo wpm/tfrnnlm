@@ -221,7 +221,7 @@ class TestCommandLine(TestCase):
         self._command_line_error(ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
 
     def test_directory_already_exists(self):
-        cmd = "index %s document1 document2 --max-vocabulary=-50000" % self.directory
+        cmd = "index %s document1 document2" % self.directory
         self._command_line_error(ArgumentError, lambda: self.parser.parse_args(cmd.split()))
 
     def _command_line_error(self, error_type, action):
