@@ -4,8 +4,21 @@ import numpy as np
 
 
 class DocumentSet(object):
+    """
+    Set of documents used to train or evaluate a language model.
+
+    Documents are sequences of integers. (A text document must by indexed before being used here.) Each document is
+    treated as an independent Markov process.
+
+    The epoch member function enumerates over the data in the documents, returning batches suitable for training an RNN.
+    """
+
     def __init__(self, documents):
-        self.documents = documents
+        """
+        :param documents: documents in this data set
+        :type documents: list of lists, where the inner lists can be converted to numpy.array objects
+        """
+        self.documents = [np.array(document) for document in documents]
 
     def __len__(self):
         """
@@ -44,10 +57,10 @@ class DocumentSet(object):
     @staticmethod
     def language_model_batches(data, time_steps, batch_size):
         """
-        Arranges a sequence of data into a form for use in batched language model training. This returns pairs of arrays.
-        The first is the language model context, the second is the context. The data is mapped into the context in order
-        in arrays with the shape (batch_size x time_steps). The target is the same shifted ahead by a single time step. The
-        end of the data is padded with zeros as necessary.
+        Arranges a sequence of data into a form for use in batched language model training. This returns pairs of
+        arrays. The first is the language model context, the second is the context. The data is mapped into the context
+        in order in arrays with the shape (batch_size x time_steps). The target is the same shifted ahead by a single
+        time step. The end of the data is padded with zeros as necessary.
 
         Each batch may be used as input for tf.nn.dynamic_rnn.
 
@@ -68,7 +81,7 @@ class DocumentSet(object):
         p = [(n + i) % m for i in range(m)].index(0)
         padded_data = np.pad(data, (0, (p + 1)), mode="constant")
         instances = np.math.ceil((len(padded_data) - 1) / time_steps)
-        # Context and targets are arrays of shape (k x batch_size x time_steps).
+        # Context and targets are arrays of shape (total_batches x batch_size x time_steps).
         xs = padded_data[:-1].reshape(instances // batch_size, batch_size, time_steps)
         ys = padded_data[1:].reshape(instances // batch_size, batch_size, time_steps)
         # Enumerator over the batches.
