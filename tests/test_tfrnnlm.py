@@ -1,12 +1,15 @@
 import collections
+import os.path
+import shutil
+import tempfile
 import textwrap
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from unittest import TestCase
 
 import numpy as np
 from tfrnnlm.document_set import DocumentSet
 from tfrnnlm.main import create_argument_parser
-from tfrnnlm.prepare_data import vocabulary_from_documents
+from tfrnnlm.prepare_data import vocabulary_from_documents, index_text_files
 from tfrnnlm.rnn import ExitCriteria, Parameters, Validation
 from tfrnnlm.text import IndexedVocabulary, WhitespaceWordTokenization, PennTreebankTokenization
 
@@ -176,7 +179,30 @@ class TestRNN(TestCase):
 
 class TestCommandLine(TestCase):
     def setUp(self):
+        self.directory = tempfile.mkdtemp()
         self.parser = create_argument_parser()
+
+    def tearDown(self):
+        shutil.rmtree(self.directory)
 
     def test_parser_exists(self):
         self.assertIsInstance(self.parser, ArgumentParser)
+
+    def test_index(self):
+        output_directory = os.path.join(self.directory, "output")
+        cmd = "index %s document1 document2" % output_directory
+        actual = self.parser.parse_args(cmd.split())
+        expected = Namespace(documents=["document1", "document2"], func=index_text_files,
+                             indexed_data_directory=output_directory, log='INFO', max_vocabulary=None,
+                             min_frequency=None, tokenization='word')
+        self.assertEqual(actual, expected)
+
+    def test_index_with_optional_arguments(self):
+        output_directory = os.path.join(self.directory, "output")
+        cmd = "index %s document1 document2 --max-vocabulary=50000 --min-frequency=100 --tokenization=penntb" \
+              % output_directory
+        actual = self.parser.parse_args(cmd.split())
+        expected = Namespace(documents=["document1", "document2"], func=index_text_files,
+                             indexed_data_directory=output_directory, log="INFO", max_vocabulary=50000,
+                             min_frequency=100, tokenization="penntb")
+        self.assertEqual(actual, expected)
