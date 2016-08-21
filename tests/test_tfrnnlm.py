@@ -1,9 +1,11 @@
 import collections
 import textwrap
+from argparse import ArgumentParser
 from unittest import TestCase
 
 import numpy as np
 from tfrnnlm.document_set import DocumentSet
+from tfrnnlm.main import create_argument_parser
 from tfrnnlm.prepare_data import vocabulary_from_documents
 from tfrnnlm.rnn import ExitCriteria, Parameters, Validation
 from tfrnnlm.text import IndexedVocabulary, WhitespaceWordTokenization, PennTreebankTokenization
@@ -170,3 +172,11 @@ class TestRNN(TestCase):
         v = Validation(None, None)
         self.assertEqual(v.interval, None)
         self.assertEqual(v.validation_set, None)
+
+
+class TestCommandLine(TestCase):
+    def setUp(self):
+        self.parser = create_argument_parser()
+
+    def test_parser_exists(self):
+        self.assertIsInstance(self.parser, ArgumentParser)

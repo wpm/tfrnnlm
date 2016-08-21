@@ -10,13 +10,26 @@ from tfrnnlm.train import train_model
 
 
 def main():
-    global parser
-    parser = argparse.ArgumentParser(description="tfrnnlm version %s" % __version__, fromfile_prefix_chars='@')
+    parser = create_argument_parser()
+    args = parser.parse_args()
 
+    if not hasattr(args, "func"):
+        parser.print_usage()
+        parser.exit(0)
+
+    configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
+
+    if hasattr(args, "tokenization"):
+        args.tokenization = {"word": WhitespaceWordTokenization(),
+                             "penntb": PennTreebankTokenization()}[args.tokenization]
+    args.func(args)
+
+
+def create_argument_parser():
+    parser = argparse.ArgumentParser(description="tfrnnlm version %s" % __version__, fromfile_prefix_chars='@')
     shared = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--version', action='version', version="%(prog)s " + __version__)
     shared.add_argument("--log", default="INFO", help="logging level")
-
     subparsers = parser.add_subparsers(title="TensorFlow RNN Language Model")
 
     index = subparsers.add_parser("index", description="Index text files and create a vocabulary.", parents=[shared],
@@ -60,18 +73,7 @@ def main():
                                    help="sample text from language model")
     sample.add_argument("model", help="directory from which to read the model")
     sample.set_defaults(func=lambda a: print(a))
-    args = parser.parse_args()
-
-    if not hasattr(args, "func"):
-        parser.print_usage()
-        parser.exit(0)
-
-    configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
-
-    if hasattr(args, "tokenization"):
-        args.tokenization = {"word": WhitespaceWordTokenization(),
-                             "penntb": PennTreebankTokenization()}[args.tokenization]
-    args.func(args)
+    return parser
 
 
 # Various argparse type functions.
@@ -94,8 +96,7 @@ def new_directory(directory):
     try:
         os.makedirs(directory)
     except FileExistsError:
-        parser.print_usage()
-        parser.error("The directory %s already exists." % directory)
+        raise argparse.ArgumentError(directory, "The directory %s already exists." % directory)
     return directory
 
 
