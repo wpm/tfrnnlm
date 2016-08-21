@@ -56,13 +56,13 @@ def create_argument_parser():
     train.add_argument("--layers", type=positive_integer, default=2, help="number of RNN layers")
     train.add_argument("--keep-probability", type=real_zero_to_one, default=0.5,
                        help="probability to keep a cell in a dropout layer")
-    train.add_argument("--max-gradient", type=float, default=5, help="value to clip gradients to")
+    train.add_argument("--max-gradient", type=positive_real, default=5, help="value to clip gradients to")
     train.add_argument("--max-iterations", type=positive_integer, help="number of training iterations to run")
     train.add_argument("--logging-interval", type=positive_integer, default=100,
                        help="log and write summary after this many iterations")
     train.add_argument("--max-epochs", type=positive_integer, default=6, help="number of training epochs to run")
-    train.add_argument("--learning-rate", type=float, default=1.0, help="training learning rate")
-    train.add_argument("--init", type=float, default=0.05, help="random initial absolute value range")
+    train.add_argument("--learning-rate", type=positive_real, default=1.0, help="training learning rate")
+    train.add_argument("--init", type=positive_real, default=0.05, help="random initial absolute value range")
     train.add_argument("--sample", type=real_zero_to_one, help="only use this much of the data sets")
     train.set_defaults(func=train_model)
 
@@ -82,18 +82,25 @@ def create_argument_parser():
 
 # Various argparse type functions.
 
-def positive_integer(n):
-    n = int(n)
-    if n <= 0:
-        raise argparse.ArgumentTypeError("%d must be greater than zero" % n)
-    return n
+def positive_integer(i):
+    i = int(i)
+    if i <= 0:
+        raise argparse.ArgumentTypeError("%d must be greater than zero" % i)
+    return i
 
 
-def real_zero_to_one(n):
-    n = float(n)
-    if n < 0 or n > 1:
-        raise argparse.ArgumentTypeError("%f must be between zero and one" % n)
-    return n
+def positive_real(r):
+    r = float(r)
+    if r <= 0:
+        raise argparse.ArgumentTypeError("%d must be greater than zero" % r)
+    return r
+
+
+def real_zero_to_one(r):
+    r = float(r)
+    if r < 0 or r > 1:
+        raise argparse.ArgumentTypeError("%f must be between zero and one" % r)
+    return r
 
 
 def new_directory(directory):
