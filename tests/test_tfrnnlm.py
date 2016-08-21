@@ -8,6 +8,7 @@ from argparse import ArgumentParser, Namespace, ArgumentTypeError, ArgumentError
 from unittest import TestCase
 
 import numpy as np
+from tfrnnlm.command import test_model
 from tfrnnlm.document_set import DocumentSet
 from tfrnnlm.main import create_argument_parser
 from tfrnnlm.prepare_data import vocabulary_from_documents, index_text_files
@@ -185,9 +186,10 @@ class TestRNN(TestCase):
         self.assertEqual(d.summary, "summary")
 
 
-class TestCommandLine(TestCase):
+class TestIndexCommandLine(TestCase):
     def setUp(self):
         self.directory = tempfile.mkdtemp()
+        self.output_directory = os.path.join(self.directory, "output")
         self.parser = create_argument_parser()
 
     def tearDown(self):
@@ -197,37 +199,74 @@ class TestCommandLine(TestCase):
         self.assertIsInstance(self.parser, ArgumentParser)
 
     def test_index(self):
-        output_directory = os.path.join(self.directory, "output")
-        cmd = "index %s document1 document2" % output_directory
+        cmd = "index %s document1 document2" % self.output_directory
         actual = self.parser.parse_args(cmd.split())
         expected = Namespace(documents=["document1", "document2"], func=index_text_files,
-                             indexed_data_directory=output_directory, log='INFO', max_vocabulary=None,
-                             min_frequency=None, tokenization='word')
+                             indexed_data_directory=self.output_directory, log="INFO", max_vocabulary=None,
+                             min_frequency=None, tokenization="word")
         self.assertEqual(actual, expected)
 
     def test_index_with_optional_arguments(self):
-        output_directory = os.path.join(self.directory, "output")
         cmd = "index %s document1 document2 --max-vocabulary=50000 --min-frequency=100 --tokenization=penntb" \
-              % output_directory
+              % self.output_directory
         actual = self.parser.parse_args(cmd.split())
         expected = Namespace(documents=["document1", "document2"], func=index_text_files,
-                             indexed_data_directory=output_directory, log="INFO", max_vocabulary=50000,
+                             indexed_data_directory=self.output_directory, log="INFO", max_vocabulary=50000,
                              min_frequency=100, tokenization="penntb")
         self.assertEqual(actual, expected)
 
-    def test_invalid_integer(self):
-        output_directory = os.path.join(self.directory, "output")
-        cmd = "index %s document1 document2 --max-vocabulary=-50000" % output_directory
-        self._command_line_error(ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
+    def test_invalid_max_vocabulary(self):
+        cmd = "index %s document1 document2 --max-vocabulary=-50000" % self.output_directory
+        command_line_error(self, ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
+        cmd = "index %s document1 document2 --max-vocabulary=0" % self.output_directory
+        command_line_error(self, ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
 
     def test_directory_already_exists(self):
         cmd = "index %s document1 document2" % self.directory
-        self._command_line_error(ArgumentError, lambda: self.parser.parse_args(cmd.split()))
+        command_line_error(self, ArgumentError, lambda: self.parser.parse_args(cmd.split()))
 
-    def _command_line_error(self, error_type, action):
-        with open(os.devnull, "w") as sys.stderr:  # Suppresses error message.
-            try:
-                with self.assertRaises(error_type):
-                    action()
-            except SystemExit:  # Stops argparse from ending the program
-                pass
+
+class TestTestCommandLine(TestCase):
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.document1 = os.path.join(self.directory, "document1.npy")
+        np.save(self.document1, np.arange(10))
+        self.document2 = os.path.join(self.directory, "document2.npy")
+        np.save(self.document2, np.arange(20))
+        self.parser = create_argument_parser()
+        self.cmd = "test model-directory %s %s" % (self.document1, self.document2)
+
+    def tearDown(self):
+        shutil.rmtree(self.directory)
+
+    def test_test(self):
+        actual = self.parser.parse_args(self.cmd.split())
+        self.assertEqual(actual.model_directory, "model-directory")
+        self.assertEqual(actual.func, test_model)
+        self.assertEqual(actual.sample, None)
+        self.assertEqual(actual.log, "INFO")
+        np.testing.assert_equal(actual.test_set, [np.arange(10), np.arange(20)])
+
+    def test_test_with_sample(self):
+        cmd = "%s --sample=0.5" % self.cmd
+        actual = self.parser.parse_args(cmd.split())
+        self.assertEqual(actual.model_directory, "model-directory")
+        self.assertEqual(actual.func, test_model)
+        self.assertEqual(actual.sample, 0.5)
+        self.assertEqual(actual.log, "INFO")
+        np.testing.assert_equal(actual.test_set, [np.arange(10), np.arange(20)])
+
+    def test_invalid_sample(self):
+        cmd = "%s --sample=1.5" % self.cmd
+        command_line_error(self, ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
+        cmd = "%s --sample=-1.5" % self.cmd
+        command_line_error(self, ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
+
+
+def command_line_error(test_case, error_type, action):
+    with open(os.devnull, "w") as sys.stderr:  # Suppresses error message.
+        try:
+            with test_case.assertRaises(error_type):
+                action()
+        except SystemExit:  # Stops argparse from ending the program
+            pass
