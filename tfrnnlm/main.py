@@ -4,8 +4,8 @@ import pickle
 
 import numpy as np
 from tfrnnlm import configure_logger, __version__
+from tfrnnlm.command import train_model, test_model
 from tfrnnlm.prepare_data import index_text_files
-from tfrnnlm.train import train_model
 
 
 def main():
@@ -65,6 +65,13 @@ def create_argument_parser():
     train.add_argument("--init", type=float, default=0.05, help="random initial absolute value range")
     train.add_argument("--sample", type=real_zero_to_one, help="only use this much of the data sets")
     train.set_defaults(func=train_model)
+
+    test = subparsers.add_parser("test", description="Use an RNN model.", parents=[shared],
+                                 help="Use a previously-trained model to get perplexity on a test set")
+    test.add_argument("model_directory", help="directory from which to read the model")
+    test.add_argument("test_set", nargs="+", type=np.load, help="files containing test data")
+    test.add_argument("--sample", type=real_zero_to_one, help="only use this much of the test set")
+    test.set_defaults(func=test_model)
 
     sample = subparsers.add_parser("sample", description="Sample text from a RNN model.", parents=[shared],
                                    help="sample text from language model")

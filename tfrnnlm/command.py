@@ -36,6 +36,17 @@ def train_model(args):
                         ExitCriteria(args.max_iterations, args.max_epochs),
                         validation,
                         args.logging_interval,
-                        Directories(args.model_directory, args.summary_directory)
-                        )
+                        Directories(args.model_directory, args.summary_directory))
     logger.info("Total training time %s" % timedelta(seconds=(time.time() - start_time)))
+
+
+def test_model(args):
+    if args.sample is not None:
+        args.test_set = [document[:int(len(document) * args.sample)] for document in args.test_set]
+    test_set = DocumentSet(args.test_set)
+    logger.info("Test set: %s" % test_set)
+    with tf.Graph().as_default():
+        with tf.Session() as session:
+            model = RNN.restore(session, args.model_directory)
+            perplexity = model.test(session, test_set)
+    print("Perplexity %0.4f" % perplexity)

@@ -1,3 +1,4 @@
+import json
 import os.path
 
 import numpy as np
@@ -8,7 +9,39 @@ from tfrnnlm import logger
 class RNN(object):
     """Recursive Neural Network"""
 
+    @classmethod
+    def restore(cls, session, model_directory):
+        """
+        Restore a previously trained model
+
+        :param session: session into which to restore the model
+        :type session: TensorFlow Session
+        :param model_directory: directory to which the model was saved
+        :type model_directory: str
+        :return: trained model
+        :rtype: RNN
+        """
+        with open(cls._parameters_file(model_directory)) as f:
+            parameters = json.load(f)
+        model = cls(parameters["init"], parameters["max_gradient"],
+                    parameters["batch_size"], parameters["time_steps"], parameters["vocabulary_size"],
+                    parameters["hidden_units"], parameters["layers"])
+        tf.train.Saver().restore(session, cls._model_file(model_directory))
+        return model
+
+    @staticmethod
+    def _parameters_file(model_directory):
+        return os.path.join(model_directory, "parameters.json")
+
+    @staticmethod
+    def _model_file(model_directory):
+        return os.path.join(model_directory, "model")
+
     def __init__(self, init, max_gradient, batch_size, time_steps, vocabulary_size, hidden_units, layers):
+        self.init = init
+        self.max_gradient = max_gradient
+        self.layers = layers
+
         with tf.name_scope("Parameters"):
             self.learning_rate = tf.placeholder(tf.float32, name="learning_rate")
             self.keep_probability = tf.placeholder(tf.float32, name="keep_probability")
@@ -71,6 +104,14 @@ class RNN(object):
     def time_steps(self):
         return self.input.get_shape()[1].value
 
+    @property
+    def vocabulary_size(self):
+        return self.embedding.get_shape()[0].value
+
+    @property
+    def hidden_units(self):
+        return self.embedding.get_shape()[1].value
+
     def train(self, session, training_set, parameters, exit_criteria, validation, logging_interval, directories):
         epoch = 1
         iteration = 0
@@ -117,9 +158,23 @@ class RNN(object):
         logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
         summary.close()
         if directories.model is not None:
-            model_filename = os.path.join(directories.model, "model")
+            model_filename = self._model_file(directories.model)
             tf.train.Saver().save(session, model_filename)
-            logger.info("Saved model in %s " % model_filename)
+            self._write_model_parameters(directories.model)
+            logger.info("Saved model in %s " % directories.model)
+
+    def _write_model_parameters(self, model_directory):
+        parameters = {
+            "init": self.init,
+            "max_gradient": self.max_gradient,
+            "batch_size": self.batch_size,
+            "time_steps": self.time_steps,
+            "vocabulary_size": self.vocabulary_size,
+            "hidden_units": self.hidden_units,
+            "layers": self.layers
+        }
+        with open(self._parameters_file(model_directory), "w") as f:
+            json.dump(parameters, f, indent=4)
 
     def test(self, session, test_set):
         state = None
@@ -172,6 +227,11 @@ class RNN(object):
             return NullSummaryWriter()
 
 
+class StopTrainingException(Exception):
+    pass
+
+
+# Objects used to group training parameters
 class ExitCriteria(object):
     def __init__(self, max_iterations, max_epochs):
         self.max_iterations = max_iterations
@@ -194,7 +254,3 @@ class Directories(object):
     def __init__(self, model, summary):
         self.model = model
         self.summary = summary
-
-
-class StopTrainingException(Exception):
-    pass
