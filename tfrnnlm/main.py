@@ -21,37 +21,39 @@ def main():
 
     index = subparsers.add_parser("index", description="Index text files and create a vocabulary.", parents=[shared],
                                   help="index text files")
-    index.add_argument("indexed_data_directory", type=create_new_directory,
+    index.add_argument("indexed_data_directory", type=new_directory,
                        help="directory to put indexed files and vocabulary")
     index.add_argument("documents", nargs="+", help="text files")
     index.add_argument("--tokenization", choices=["word", "penntb"], default="word", help="tokenization method")
-    index.add_argument("--min-frequency", type=int, help="minimum type frequency for inclusion in the vocabulary")
-    index.add_argument("--max-vocabulary", type=int, help="maximum vocabulary size")
+    index.add_argument("--min-frequency", type=positive_integer,
+                       help="minimum type frequency for inclusion in the vocabulary")
+    index.add_argument("--max-vocabulary", type=positive_integer, help="maximum vocabulary size")
     index.set_defaults(func=index_text_files)
 
     train = subparsers.add_parser("train", description="Train an RNN language model.", parents=[shared],
                                   help="train a language model")
-    train.add_argument("vocabulary", type=vocabulary, help="indexed vocabulary file")
+    train.add_argument("vocabulary", type=pickle_file, help="indexed vocabulary file")
     train.add_argument("training_set", nargs="+", type=np.load, help="files containing training data")
     train.add_argument("--validation-set", nargs="+", type=np.load, default=[], help="files containing validation data")
-    train.add_argument("--validation-interval", type=int, default=1000, help="how often to run the validation set")
-    train.add_argument("--model-directory", type=create_new_directory, help="directory to which to write the model")
-    train.add_argument("--summary-directory", type=create_new_directory,
+    train.add_argument("--validation-interval", type=positive_integer, default=1000,
+                       help="how often to run the validation set")
+    train.add_argument("--model-directory", type=new_directory, help="directory to which to write the model")
+    train.add_argument("--summary-directory", type=new_directory,
                        help="directory to which to write a training summary")
-    train.add_argument("--time-steps", type=int, default=20, help="training unrolled time steps")
-    train.add_argument("--batch-size", type=int, default=20, help="training size batch")
-    train.add_argument("--hidden-units", type=int, default=650, help="number of hidden units in the RNN")
-    train.add_argument("--layers", type=int, default=2, help="number of RNN layers")
-    train.add_argument("--keep-probability", type=float, default=0.5,
+    train.add_argument("--time-steps", type=positive_integer, default=20, help="training unrolled time steps")
+    train.add_argument("--batch-size", type=positive_integer, default=20, help="training size batch")
+    train.add_argument("--hidden-units", type=positive_integer, default=650, help="number of hidden units in the RNN")
+    train.add_argument("--layers", type=positive_integer, default=2, help="number of RNN layers")
+    train.add_argument("--keep-probability", type=real_zero_to_one, default=0.5,
                        help="probability to keep a cell in a dropout layer")
     train.add_argument("--max-gradient", type=float, default=5, help="value to clip gradients to")
-    train.add_argument("--max-iterations", type=int, help="number of training iterations to run")
-    train.add_argument("--logging-interval", type=int, default=100,
+    train.add_argument("--max-iterations", type=positive_integer, help="number of training iterations to run")
+    train.add_argument("--logging-interval", type=positive_integer, default=100,
                        help="log and write summary after this many iterations")
-    train.add_argument("--max-epochs", type=int, default=6, help="number of training epochs to run")
+    train.add_argument("--max-epochs", type=positive_integer, default=6, help="number of training epochs to run")
     train.add_argument("--learning-rate", type=float, default=1.0, help="training learning rate")
     train.add_argument("--init", type=float, default=0.05, help="random initial absolute value range")
-    train.add_argument("--sample", type=float, help="only use this much of the data sets")
+    train.add_argument("--sample", type=real_zero_to_one, help="only use this much of the data sets")
     train.set_defaults(func=train_model)
 
     sample = subparsers.add_parser("sample", description="Sample text from a RNN model.", parents=[shared],
@@ -72,7 +74,23 @@ def main():
     args.func(args)
 
 
-def create_new_directory(directory):
+# Various argparse type functions.
+
+def positive_integer(n):
+    n = int(n)
+    if n <= 0:
+        raise argparse.ArgumentTypeError("%d must be greater than zero" % n)
+    return n
+
+
+def real_zero_to_one(n):
+    n = float(n)
+    if n < 0 or n > 1:
+        raise argparse.ArgumentTypeError("%f must be between zero and one" % n)
+    return n
+
+
+def new_directory(directory):
     try:
         os.makedirs(directory)
     except FileExistsError:
@@ -81,6 +99,6 @@ def create_new_directory(directory):
     return directory
 
 
-def vocabulary(filename):
+def pickle_file(filename):
     with open(filename, "rb") as f:
         return pickle.load(f)
