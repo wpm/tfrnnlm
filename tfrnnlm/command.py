@@ -11,14 +11,10 @@ def train_model(args):
     if args.model_directory is None:
         logger.warn("Not saving a model.")
     logger.info(args.vocabulary)
-    # Optionally only retain a portion of the documents.
-    if args.sample is not None:
-        args.training_set = [document[:int(len(document) * args.sample)] for document in args.training_set]
-        args.validation_set = [document[:int(len(document) * args.sample)] for document in args.validation_set]
-    training_set = DocumentSet(args.training_set)
+    training_set = DocumentSet(args.training_set, args.sample)
     logger.info("Training set: %s" % training_set)
     if args.validation_set is not None:
-        validation_set = DocumentSet(args.validation_set)
+        validation_set = DocumentSet(args.validation_set, args.sample)
         logger.info("Validation set: %s" % validation_set)
         validation = Validation(args.validation_interval, validation_set)
     else:
@@ -41,9 +37,7 @@ def train_model(args):
 
 
 def test_model(args):
-    if args.sample is not None:
-        args.test_set = [document[:int(len(document) * args.sample)] for document in args.test_set]
-    test_set = DocumentSet(args.test_set)
+    test_set = DocumentSet(args.test_set, args.sample)
     logger.info("Test set: %s" % test_set)
     with tf.Graph().as_default():
         with tf.Session() as session:

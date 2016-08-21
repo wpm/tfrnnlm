@@ -164,6 +164,10 @@ class TestDocumentSet(TestCase):
                                   1.0)]
                                 )
 
+    def test_portion(self):
+        document_set = DocumentSet([np.arange(20), np.arange(13)], 0.5)
+        self.assertEqual(len(document_set), 16)
+
 
 class TestRNN(TestCase):
     def test_configuration_groups(self):

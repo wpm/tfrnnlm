@@ -11,14 +11,21 @@ class DocumentSet(object):
     treated as an independent Markov process.
 
     The epoch member function enumerates over the data in the documents, returning batches suitable for training an RNN.
+
+    Optionally, only a portion of the total documents will be retained. This is a convenience that allows for making
+    quick runs on large data sets.
     """
 
-    def __init__(self, documents):
+    def __init__(self, documents, portion=None):
         """
         :param documents: documents in this data set
         :type documents: list of lists, where the inner lists can be converted to numpy.array objects
+        :param portion: optional portion of the documents to retain, None retains the entire documents
+        :type portion: float between 0 and 1 or None
         """
         self.documents = [np.array(document) for document in documents]
+        if portion is not None:
+            self.documents = [document[:int(len(document) * portion)] for document in self.documents]
 
     def __len__(self):
         """
