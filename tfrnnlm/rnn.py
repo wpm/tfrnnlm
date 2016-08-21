@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 import tensorflow as tf
 from tfrnnlm import logger
@@ -69,11 +71,11 @@ class RNN(object):
     def time_steps(self):
         return self.input.get_shape()[1].value
 
-    def train(self, session, training_set, parameters, exit_criteria, validation, logging_interval, summary_directory):
+    def train(self, session, training_set, parameters, exit_criteria, validation, logging_interval, directories):
         epoch = 1
         iteration = 0
         state = None
-        summary = self.summary_writer(summary_directory, session)
+        summary = self.summary_writer(directories.summary, session)
         session.run(self.initialize)
         try:
             # Enumerate over the training set until exit criteria are met.
@@ -114,6 +116,10 @@ class RNN(object):
             pass
         logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
         summary.close()
+        if directories.model is not None:
+            model_filename = os.path.join(directories.model, "model")
+            tf.train.Saver().save(session, model_filename)
+            logger.info("Saved model in %s " % model_filename)
 
     def test(self, session, test_set):
         state = None
@@ -182,6 +188,12 @@ class Validation(object):
     def __init__(self, interval, validation_set):
         self.interval = interval
         self.validation_set = validation_set
+
+
+class Directories(object):
+    def __init__(self, model, summary):
+        self.model = model
+        self.summary = summary
 
 
 class StopTrainingException(Exception):

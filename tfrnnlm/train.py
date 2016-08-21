@@ -4,7 +4,7 @@ from datetime import timedelta
 import tensorflow as tf
 from tfrnnlm import logger
 from tfrnnlm.document_set import DocumentSet
-from tfrnnlm.rnn import RNN, Parameters, ExitCriteria, Validation
+from tfrnnlm.rnn import RNN, Parameters, ExitCriteria, Validation, Directories
 
 
 def train_model(args):
@@ -36,5 +36,6 @@ def train_model(args):
                         ExitCriteria(args.max_iterations, args.max_epochs),
                         validation,
                         args.logging_interval,
-                        args.summary_directory)
+                        Directories(args.model_directory, args.summary_directory)
+                        )
     logger.info("Total training time %s" % timedelta(seconds=(time.time() - start_time)))

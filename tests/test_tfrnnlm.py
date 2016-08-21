@@ -11,7 +11,7 @@ import numpy as np
 from tfrnnlm.document_set import DocumentSet
 from tfrnnlm.main import create_argument_parser
 from tfrnnlm.prepare_data import vocabulary_from_documents, index_text_files
-from tfrnnlm.rnn import ExitCriteria, Parameters, Validation
+from tfrnnlm.rnn import ExitCriteria, Parameters, Validation, Directories
 from tfrnnlm.text import IndexedVocabulary, WhitespaceWordTokenization, PennTreebankTokenization
 
 
@@ -176,6 +176,9 @@ class TestRNN(TestCase):
         v = Validation(None, None)
         self.assertEqual(v.interval, None)
         self.assertEqual(v.validation_set, None)
+        d = Directories("model", "summary")
+        self.assertEqual(d.model, "model")
+        self.assertEqual(d.summary, "summary")
 
 
 class TestCommandLine(TestCase):
