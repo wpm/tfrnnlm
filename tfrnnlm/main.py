@@ -5,7 +5,6 @@ import pickle
 import numpy as np
 from tfrnnlm import configure_logger, __version__
 from tfrnnlm.prepare_data import index_text_files
-from tfrnnlm.text import WhitespaceWordTokenization, PennTreebankTokenization
 from tfrnnlm.train import train_model
 
 
@@ -19,9 +18,6 @@ def main():
 
     configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
 
-    if hasattr(args, "tokenization"):
-        args.tokenization = {"word": WhitespaceWordTokenization(),
-                             "penntb": PennTreebankTokenization()}[args.tokenization]
     args.func(args)
 
 

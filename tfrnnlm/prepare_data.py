@@ -3,12 +3,14 @@ import os
 import pickle
 
 import numpy as np
-from tfrnnlm.text import IndexedVocabulary, PennTreebankTokenization
+from tfrnnlm.text import IndexedVocabulary, PennTreebankTokenization, WhitespaceWordTokenization
 
 
 def index_text_files(args):
+    tokenization = {"word": WhitespaceWordTokenization(),
+                    "penntb": PennTreebankTokenization()}[args.tokenization]
     # Create and save the vocabulary.
-    if isinstance(args.tokenization, PennTreebankTokenization):
+    if isinstance(tokenization, PennTreebankTokenization):
         # Penn Treebank data already contains an <unk> out of vocabulary symbol.
         out_of_vocabulary = "<unk>"
     else:
@@ -16,7 +18,7 @@ def index_text_files(args):
     vocabulary_factory = IndexedVocabulary.factory(min_frequency=args.min_frequency, max_vocabulary=args.max_vocabulary,
                                                    out_of_vocabulary=out_of_vocabulary)
     documents = (open(document_name).read() for document_name in args.documents)
-    vocabulary = vocabulary_from_documents(documents, args.tokenization, vocabulary_factory)
+    vocabulary = vocabulary_from_documents(documents, tokenization, vocabulary_factory)
     with open(os.path.join(args.indexed_data_directory, "vocabulary"), "wb") as vocabulary_file:
         pickle.dump(vocabulary, vocabulary_file)
     # Use the vocabulary to index the files.
@@ -26,7 +28,7 @@ def index_text_files(args):
             indexed_document_name = os.path.join(args.indexed_data_directory, os.path.basename(document_name))
             np.save(indexed_document_name, indexed_document)
     # Write information about the tokenization.
-    info = [str(args.tokenization)]
+    info = [str(tokenization)]
     if args.min_frequency is not None:
         info.append("Minimum frequency %d" % args.min_frequency)
     if args.max_vocabulary is not None:
