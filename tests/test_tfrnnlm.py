@@ -1,9 +1,10 @@
 import collections
 import os.path
 import shutil
+import sys
 import tempfile
 import textwrap
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, ArgumentTypeError
 from unittest import TestCase
 
 import numpy as np
@@ -206,3 +207,13 @@ class TestCommandLine(TestCase):
                              indexed_data_directory=output_directory, log="INFO", max_vocabulary=50000,
                              min_frequency=100, tokenization="penntb")
         self.assertEqual(actual, expected)
+
+    def test_invalid_integer(self):
+        output_directory = os.path.join(self.directory, "output")
+        cmd = "index %s document1 document2 --max-vocabulary=-50000" % output_directory
+        with open(os.devnull, "w") as sys.stderr:  # Suppresses error message.
+            try:
+                with self.assertRaises(ArgumentTypeError):
+                    self.parser.parse_args(cmd.split())
+            except SystemExit:  # Stops argparse from ending the program
+                pass
