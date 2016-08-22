@@ -5,12 +5,13 @@ import sys
 import tempfile
 import textwrap
 from argparse import ArgumentParser, Namespace, ArgumentTypeError, ArgumentError
+from io import StringIO
 from unittest import TestCase
 
 import numpy as np
 from tfrnnlm.command import test_model
 from tfrnnlm.document_set import DocumentSet
-from tfrnnlm.main import create_argument_parser
+from tfrnnlm.main import create_argument_parser, main
 from tfrnnlm.prepare_data import vocabulary_from_documents, index_text_files
 from tfrnnlm.rnn import ExitCriteria, Parameters, Validation, Directories
 from tfrnnlm.text import IndexedVocabulary, WhitespaceWordTokenization, PennTreebankTokenization
@@ -261,6 +262,44 @@ class TestTestCommandLine(TestCase):
         command_line_error(self, ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
         cmd = "%s --sample=-1.5" % self.cmd
         command_line_error(self, ArgumentTypeError, lambda: self.parser.parse_args(cmd.split()))
+
+
+class TestMain(TestCase):
+    def test_no_arguments(self):
+        actual = main_function_output([])
+        self.assertEqual(actual, "usage: tfrnnlm [-h] [--version] [--log LOG] {index,train,test,sample} ...\n")
+
+    def test_help(self):
+        actual = main_function_output(["--help"])
+        expected = """usage: tfrnnlm [-h] [--version] [--log LOG] {index,train,test,sample} ...
+
+tfrnnlm version 1.0.0
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+  --log LOG             logging level
+
+TensorFlow RNN Language Model:
+  {index,train,test,sample}
+    index               index text files
+    train               train a language model
+    test                Use a previously-trained model to get perplexity on a
+                        test set
+    sample              sample text from language model
+"""
+        self.assertEqual(actual, expected)
+
+
+def main_function_output(args):
+    sys.argv = ["tfrnnlm"] + args
+    sys.stdout = x = StringIO()
+    try:
+        main()
+    except SystemExit:
+        pass
+    sys.stderr = sys.__stdout__
+    return x.getvalue()
 
 
 def command_line_error(test_case, error_type, action):

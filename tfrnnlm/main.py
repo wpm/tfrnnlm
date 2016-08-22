@@ -1,9 +1,10 @@
 import argparse
+import logging
 import os
 import pickle
 
 import numpy as np
-from tfrnnlm import configure_logger, __version__
+from tfrnnlm import __version__, logger
 from tfrnnlm.command import train_model, test_model
 from tfrnnlm.prepare_data import index_text_files
 
@@ -11,25 +12,19 @@ from tfrnnlm.prepare_data import index_text_files
 def main():
     parser = create_argument_parser()
     args = parser.parse_args()
-
-    if not hasattr(args, "func"):
-        # No top level command was supplied.
-        parser.print_usage()
-        parser.exit(0)
-
     configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
-
     args.func(args)
 
 
 def create_argument_parser():
     parser = argparse.ArgumentParser(description="tfrnnlm version %s" % __version__, fromfile_prefix_chars='@')
-    shared = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--version', action='version', version="%(prog)s " + __version__)
-    shared.add_argument("--log", default="INFO", help="logging level")
+    parser.add_argument("--log", default="INFO", help="logging level")
+    parser.set_defaults(func=usage(parser))
+
     subparsers = parser.add_subparsers(title="TensorFlow RNN Language Model")
 
-    index = subparsers.add_parser("index", description="Index text files and create a vocabulary.", parents=[shared],
+    index = subparsers.add_parser("index", description="Index text files and create a vocabulary.",
                                   help="index text files")
     index.add_argument("indexed_data_directory", type=new_directory,
                        help="directory to put indexed files and vocabulary")
@@ -40,8 +35,7 @@ def create_argument_parser():
     index.add_argument("--max-vocabulary", type=positive_integer, help="maximum vocabulary size")
     index.set_defaults(func=index_text_files)
 
-    train = subparsers.add_parser("train", description="Train an RNN language model.", parents=[shared],
-                                  help="train a language model")
+    train = subparsers.add_parser("train", description="Train an RNN language model.", help="train a language model")
     train.add_argument("vocabulary", type=pickle_file, help="indexed vocabulary file")
     train.add_argument("training_set", nargs="+", type=np.load, help="files containing training data")
     train.add_argument("--validation-set", nargs="+", type=np.load, default=[], help="files containing validation data")
@@ -66,18 +60,34 @@ def create_argument_parser():
     train.add_argument("--sample", type=real_zero_to_one, help="only use this much of the data sets")
     train.set_defaults(func=train_model)
 
-    test = subparsers.add_parser("test", description="Use an RNN model.", parents=[shared],
+    test = subparsers.add_parser("test", description="Use an RNN model.",
                                  help="Use a previously-trained model to get perplexity on a test set")
     test.add_argument("model_directory", help="directory from which to read the model")
     test.add_argument("test_set", nargs="+", type=np.load, help="files containing test data")
     test.add_argument("--sample", type=real_zero_to_one, help="only use this much of the test set")
     test.set_defaults(func=test_model)
 
-    sample = subparsers.add_parser("sample", description="Sample text from a RNN model.", parents=[shared],
+    sample = subparsers.add_parser("sample", description="Sample text from a RNN model.",
                                    help="sample text from language model")
     sample.add_argument("model", help="directory from which to read the model")
     sample.set_defaults(func=lambda a: print(a))
     return parser
+
+
+def usage(parser):
+    class UsageClosure(object):
+        def __call__(self, _):
+            parser.print_usage()
+            parser.exit(0)
+
+    return UsageClosure()
+
+
+def configure_logger(level, format):
+    logger.setLevel(level)
+    h = logging.StreamHandler()
+    h.setFormatter(logging.Formatter(format))
+    logger.addHandler(h)
 
 
 # Various argparse type functions.
