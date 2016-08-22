@@ -116,6 +116,9 @@ class TestDocumentSet(TestCase):
         self.assertEqual(len(self.document_set), 33)
         self.assertEqual(str(self.document_set), "2 documents, 33 tokens")
 
+    def test_document_set_total_batches(self):
+        self.assertEqual(self.document_set.total_batches(3, 4), 4)
+
     def test_document_set_epoch(self):
         batches = self.document_set.epoch(time_steps=3, batch_size=4)
         self.assertIsInstance(batches, collections.Iterable)
@@ -267,11 +270,14 @@ class TestTestCommandLine(TestCase):
 class TestMain(TestCase):
     def test_no_arguments(self):
         actual = main_function_output([])
-        self.assertEqual(actual, "usage: tfrnnlm [-h] [--version] [--log LOG] {index,train,test,sample} ...\n")
+        self.assertEqual(actual, """usage: tfrnnlm [-h] [--version] [--log LOG]
+               {index,batches,train,test,sample} ...
+""")
 
     def test_help(self):
         actual = main_function_output(["--help"])
-        expected = """usage: tfrnnlm [-h] [--version] [--log LOG] {index,train,test,sample} ...
+        expected = """usage: tfrnnlm [-h] [--version] [--log LOG]
+               {index,batches,train,test,sample} ...
 
 tfrnnlm version 1.0.0
 
@@ -281,8 +287,9 @@ optional arguments:
   --log LOG             logging level
 
 TensorFlow RNN Language Model:
-  {index,train,test,sample}
+  {index,batches,train,test,sample}
     index               index text files
+    batches             batches in a data set
     train               train a language model
     test                Use a previously-trained model to get perplexity on a
                         test set

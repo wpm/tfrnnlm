@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 from tfrnnlm import __version__, logger
 from tfrnnlm.command import train_model, test_model
+from tfrnnlm.document_set import DocumentSet
 from tfrnnlm.prepare_data import index_text_files
 
 
@@ -34,6 +35,17 @@ def create_argument_parser():
                        help="minimum type frequency for inclusion in the vocabulary")
     index.add_argument("--max-vocabulary", type=positive_integer, help="maximum vocabulary size")
     index.set_defaults(func=index_text_files)
+
+    batches = subparsers.add_parser("batches",
+                                    description=
+                                    "Count the number of batches in a data set given time steps and batch size",
+                                    help="batches in a data set")
+    batches.add_argument("data_set", nargs="+", type=np.load, help="files containing the data set")
+    batches.add_argument("time_steps", type=positive_integer, help="unrolled time steps")
+    batches.add_argument("batch_size", type=positive_integer, help="batch size")
+    batches.set_defaults(func=lambda args: print("%d batches" %
+                                                 DocumentSet(args.data_set).total_batches(args.time_steps,
+                                                                                          args.batch_size)))
 
     train = subparsers.add_parser("train", description="Train an RNN language model.", help="train a language model")
     train.add_argument("vocabulary", type=pickle_file, help="indexed vocabulary file")

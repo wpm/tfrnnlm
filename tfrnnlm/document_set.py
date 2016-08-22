@@ -50,7 +50,7 @@ class DocumentSet(object):
         :rtype: iterator over (bool, numpy.array, numpy.array, float)
         """
         batches = 0
-        total_batches = self._total_batches(time_steps, batch_size)
+        total_batches = self.total_batches(time_steps, batch_size)
         for document in self.documents:
             start_document = True
             for x, y in self.language_model_batches(document, time_steps, batch_size):
@@ -58,7 +58,7 @@ class DocumentSet(object):
                 yield start_document, x, y, batches / total_batches
                 start_document = False
 
-    def _total_batches(self, time_steps, batch_size):
+    def total_batches(self, time_steps, batch_size):
         return sum(math.ceil(len(document) / (time_steps * batch_size)) for document in self.documents)
 
     @staticmethod
