@@ -23,7 +23,7 @@ class RNN(object):
         """
         with open(cls._parameters_file(model_directory)) as f:
             parameters = json.load(f)
-        model = cls(parameters["init"], parameters["max_gradient"],
+        model = cls(parameters["max_gradient"],
                     parameters["batch_size"], parameters["time_steps"], parameters["vocabulary_size"],
                     parameters["hidden_units"], parameters["layers"])
         tf.train.Saver().restore(session, cls._model_file(model_directory))
@@ -37,8 +37,7 @@ class RNN(object):
     def _model_file(model_directory):
         return os.path.join(model_directory, "model")
 
-    def __init__(self, init, max_gradient, batch_size, time_steps, vocabulary_size, hidden_units, layers):
-        self.init = init
+    def __init__(self, max_gradient, batch_size, time_steps, vocabulary_size, hidden_units, layers):
         self.max_gradient = max_gradient
         self.layers = layers
 
@@ -49,9 +48,10 @@ class RNN(object):
         with tf.name_scope("Input"):
             self.input = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="input")
             self.targets = tf.placeholder(tf.int64, shape=(batch_size, time_steps), name="targets")
+            self.init = tf.placeholder(tf.float32, shape=(), name="init")
 
         with tf.name_scope("Embedding"):
-            self.embedding = tf.Variable(tf.random_uniform((vocabulary_size, hidden_units), -init, init),
+            self.embedding = tf.Variable(tf.random_uniform((vocabulary_size, hidden_units), -self.init, self.init),
                                          dtype=tf.float32,
                                          name="embedding")
             self.embedded_input = tf.nn.embedding_lookup(self.embedding, self.input, name="embedded_input")
@@ -112,12 +112,12 @@ class RNN(object):
     def hidden_units(self):
         return self.embedding.get_shape()[1].value
 
-    def train(self, session, training_set, parameters, exit_criteria, validation, logging_interval, directories):
+    def train(self, session, init, training_set, parameters, exit_criteria, validation, logging_interval, directories):
         epoch = 1
         iteration = 0
         state = None
         summary = self.summary_writer(directories.summary, session)
-        session.run(self.initialize)
+        session.run(self.initialize, feed_dict={self.init: init})
         try:
             # Enumerate over the training set until exit criteria are met.
             while True:
@@ -165,7 +165,6 @@ class RNN(object):
 
     def _write_model_parameters(self, model_directory):
         parameters = {
-            "init": self.init,
             "max_gradient": self.max_gradient,
             "batch_size": self.batch_size,
             "time_steps": self.time_steps,

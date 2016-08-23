@@ -22,11 +22,12 @@ def train_model(args):
     # Run training.
     start_time = time.time()
     with tf.Graph().as_default():
-        model = RNN(args.init, args.max_gradient,
+        model = RNN(args.max_gradient,
                     args.batch_size, args.time_steps, len(args.vocabulary),
                     args.hidden_units, args.layers)
         with tf.Session() as session:
             model.train(session,
+                        args.init,
                         training_set,
                         Parameters(args.learning_rate, args.keep_probability),
                         ExitCriteria(args.max_iterations, args.max_epochs),
