@@ -1,13 +1,11 @@
 import argparse
+import json
 import logging
 import os
-import pickle
 
-import numpy as np
 from tfrnnlm import __version__, logger
-from tfrnnlm.command import train_model, test_model
-from tfrnnlm.document_set import DocumentSet
-from tfrnnlm.prepare_data import index_text_files
+from tfrnnlm.command import train_model, test_model, create_data_set, get_data_set_info
+from tfrnnlm.text import PartitionedData
 
 
 def main():
@@ -25,32 +23,31 @@ def create_argument_parser():
 
     subparsers = parser.add_subparsers(title="TensorFlow RNN Language Model")
 
-    index = subparsers.add_parser("index", description="Index text files and create a vocabulary.",
-                                  help="index text files")
-    index.add_argument("indexed_data_directory", type=new_directory,
-                       help="directory to put indexed files and vocabulary")
-    index.add_argument("documents", nargs="+", help="text files")
-    index.add_argument("--tokenization", choices=["word", "penntb"], default="word", help="tokenization method")
-    index.add_argument("--min-frequency", type=positive_integer,
-                       help="minimum type frequency for inclusion in the vocabulary")
-    index.add_argument("--max-vocabulary", type=positive_integer, help="maximum vocabulary size")
-    index.set_defaults(func=index_text_files)
+    data_set = subparsers.add_parser("dataset", description="Create a partitioned data set from text documents",
+                                     help="create data set")
+    data_set.add_argument("directory", type=new_directory, help="directory in which to create the data set")
+    data_set.add_argument("partitions", type=json_file, help="mapping of partitions to file names")
+    data_set.add_argument("vocabulary_partitions", nargs="+", help="partitions to use in building the vocabulary")
+    data_set.add_argument("--tokenizer", choices=["whitespace", "word", "character"], default="whitespace",
+                          help="tokenization method, default whitespace")
+    data_set.add_argument("--case-normalized", action="store_true", help="normalize to lower case?")
+    data_set.add_argument("--min-frequency", type=positive_integer,
+                          help="minimum type frequency for inclusion in the vocabulary")
+    data_set.add_argument("--max-vocabulary", type=positive_integer, help="maximum vocabulary size")
+    data_set.add_argument("--out-of-vocabulary", help="out of vocabulary token in text documents")
+    data_set.set_defaults(func=create_data_set)
 
-    batches = subparsers.add_parser("batches",
-                                    description=
-                                    "Count the number of batches in a data set given time steps and batch size",
-                                    help="batches in a data set")
-    batches.add_argument("data_set", nargs="+", type=np.load, help="files containing the data set")
-    batches.add_argument("time_steps", type=positive_integer, help="unrolled time steps")
-    batches.add_argument("batch_size", type=positive_integer, help="batch size")
-    batches.set_defaults(func=lambda args: print("%d batches" %
-                                                 DocumentSet(args.data_set).total_batches(args.time_steps,
-                                                                                          args.batch_size)))
+    data_set_info = subparsers.add_parser("dataset-info", description="Get information about a data set",
+                                          help="information about a data set")
+    data_set_info.add_argument("data_set", type=PartitionedData.deserialize, help="data set")
+    data_set_info.add_argument("--batches", nargs=2, metavar=("time_steps", "batch_size"), type=positive_integer,
+                               help="number of batches in each partition")
+    data_set_info.set_defaults(func=get_data_set_info)
 
     train = subparsers.add_parser("train", description="Train an RNN language model.", help="train a language model")
-    train.add_argument("vocabulary", type=pickle_file, help="indexed vocabulary file")
-    train.add_argument("training_set", nargs="+", type=np.load, help="files containing training data")
-    train.add_argument("--validation-set", nargs="+", type=np.load, default=[], help="files containing validation data")
+    train.add_argument("data_set", type=PartitionedData.deserialize, help="data set")
+    train.add_argument("--training_partition", default="train", help="partition containing training data")
+    train.add_argument("--validation-partition", help="partition containing validation data")
     train.add_argument("--validation-interval", type=positive_integer, default=1000,
                        help="how often to run the validation set")
     train.add_argument("--model-directory", type=new_directory, help="directory to which to write the model")
@@ -69,14 +66,13 @@ def create_argument_parser():
     train.add_argument("--max-epochs", type=positive_integer, default=6, help="number of training epochs to run")
     train.add_argument("--learning-rate", type=positive_real, default=1.0, help="training learning rate")
     train.add_argument("--init", type=positive_real, default=0.05, help="random initial absolute value range")
-    train.add_argument("--sample", type=real_zero_to_one, help="only use this much of the data sets")
     train.set_defaults(func=train_model)
 
     test = subparsers.add_parser("test", description="Use an RNN model.",
                                  help="Use a previously-trained model to get perplexity on a test set")
     test.add_argument("model_directory", help="directory from which to read the model")
-    test.add_argument("test_set", nargs="+", type=np.load, help="files containing test data")
-    test.add_argument("--sample", type=real_zero_to_one, help="only use this much of the test set")
+    test.add_argument("data_set", type=PartitionedData.deserialize, help="data set")
+    test.add_argument("--test-partition", default="test", help="test partition")
     test.set_defaults(func=test_model)
 
     sample = subparsers.add_parser("sample", description="Sample text from a RNN model.",
@@ -95,6 +91,7 @@ def usage(parser):
     return UsageClosure()
 
 
+# noinspection PyShadowingBuiltins
 def configure_logger(level, format):
     logger.setLevel(level)
     h = logging.StreamHandler()
@@ -133,6 +130,6 @@ def new_directory(directory):
     return directory
 
 
-def pickle_file(filename):
-    with open(filename, "rb") as f:
-        return pickle.load(f)
+def json_file(filename):
+    with open(filename) as f:
+        return json.load(f)

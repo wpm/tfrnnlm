@@ -40,6 +40,8 @@ class RNN(object):
     def __init__(self, max_gradient, batch_size, time_steps, vocabulary_size, hidden_units, layers):
         self.max_gradient = max_gradient
         self.layers = layers
+        # Add vocabulary slots of out of vocabulary (index 1) and padding (index 0).
+        vocabulary_size += 2
 
         with tf.name_scope("Parameters"):
             self.learning_rate = tf.placeholder(tf.float32, name="learning_rate")
