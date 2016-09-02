@@ -40,7 +40,7 @@ class RNN(object):
     def __init__(self, max_gradient, batch_size, time_steps, vocabulary_size, hidden_units, layers):
         self.max_gradient = max_gradient
         self.layers = layers
-        # Add vocabulary slots of out of vocabulary (index 1) and padding (index 0).
+        # Add vocabulary slots for padding (index 0) and out of vocabulary (index 1).
         vocabulary_size += 2
 
         with tf.name_scope("Parameters"):
@@ -114,7 +114,7 @@ class RNN(object):
     def hidden_units(self):
         return self.embedding.get_shape()[1].value
 
-    def train(self, session, init, training_set, parameters, exit_criteria, validation, logging_interval, directories):
+    def train(self, session, init, training_set, parameters, exit_criteria, validation, intervals, directories):
         epoch = 1
         iteration = 0
         state = None
@@ -139,7 +139,7 @@ class RNN(object):
                         })
                     epoch_cost += cost
                     epoch_iteration += self.time_steps
-                    if self._interval(iteration, logging_interval):
+                    if self._interval(iteration, intervals.logging_interval):
                         logger.info("Epoch %d (%0.4f complete), Iteration %d: epoch training perplexity %0.4f" %
                                     (epoch, complete, iteration, self.perplexity(epoch_cost, epoch_iteration)))
                     if validation is not None and self._interval(iteration, validation.interval):
@@ -147,6 +147,8 @@ class RNN(object):
                         self.store_validation_perplexity(session, summary, iteration, validation_perplexity)
                         logger.info("Epoch %d, Iteration %d: validation perplexity %0.4f" %
                                     (epoch, iteration, validation_perplexity))
+                    if self._interval(iteration, intervals.model_interval):
+                        self._save_model(session, directories.model, iteration)
                     if exit_criteria.max_iterations is not None and iteration > exit_criteria.max_iterations:
                         raise StopTrainingException()
 
@@ -158,12 +160,15 @@ class RNN(object):
         except (StopTrainingException, KeyboardInterrupt):
             pass
         logger.info("Stop training at epoch %d, iteration %d" % (epoch, iteration))
+        self._save_model(session, directories.model, iteration)
         summary.close()
-        if directories.model is not None:
-            model_filename = self._model_file(directories.model)
-            tf.train.Saver().save(session, model_filename)
-            self._write_model_parameters(directories.model)
-            logger.info("Saved model in %s " % directories.model)
+
+    def _save_model(self, session, model_directory, iteration):
+        if model_directory is not None:
+            model_filename = self._model_file(model_directory)
+            tf.train.Saver().save(session, model_filename, global_step=iteration)
+            self._write_model_parameters(model_directory)
+            logger.info("Saved iteration %d model in %s " % (iteration, model_directory))
 
     def _write_model_parameters(self, model_directory):
         parameters = {
@@ -249,6 +254,12 @@ class Validation(object):
     def __init__(self, interval, validation_set):
         self.interval = interval
         self.validation_set = validation_set
+
+
+class Intervals(object):
+    def __init__(self, logging_interval, model_interval):
+        self.logging_interval = logging_interval
+        self.model_interval = model_interval
 
 
 class Directories(object):

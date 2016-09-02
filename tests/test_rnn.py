@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from tfrnnlm.rnn import ExitCriteria, Parameters, Validation, Directories
+from tfrnnlm.rnn import ExitCriteria, Parameters, Validation, Directories, Intervals
 
 
 class TestRNN(TestCase):
@@ -17,3 +17,6 @@ class TestRNN(TestCase):
         d = Directories("model", "summary")
         self.assertEqual("model", d.model)
         self.assertEqual("summary", d.summary)
+        i = Intervals(100, 200)
+        self.assertEqual(100, i.logging_interval)
+        self.assertEqual(200, i.model_interval)

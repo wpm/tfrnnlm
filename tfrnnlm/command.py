@@ -3,7 +3,7 @@ from datetime import timedelta
 
 import tensorflow as tf
 from tfrnnlm import logger
-from tfrnnlm.rnn import RNN, Parameters, ExitCriteria, Validation, Directories
+from tfrnnlm.rnn import RNN, Parameters, ExitCriteria, Validation, Directories, Intervals
 from tfrnnlm.text import PartitionedData, Vocabulary, WordTokenizer, CharacterTokenizer, WhitespaceTokenizer, \
     DocumentSet
 
@@ -37,6 +37,8 @@ def get_data_set_info(args):
 
 
 def train_model(args):
+    if args.model_intervals and args.model_directory is None:
+        args.parser.error("You must specify a model directory if your specify model writing intervals")
     if args.model_directory is None:
         logger.warn("Not saving a model.")
     logger.info(args.data_set)
@@ -57,7 +59,7 @@ def train_model(args):
                         Parameters(args.learning_rate, args.keep_probability),
                         ExitCriteria(args.max_iterations, args.max_epochs),
                         validation,
-                        args.logging_interval,
+                        Intervals(args.logging_interval, args.model_intervals),
                         Directories(args.model_directory, args.summary_directory))
     logger.info("Total training time %s" % timedelta(seconds=(time.time() - start_time)))
 

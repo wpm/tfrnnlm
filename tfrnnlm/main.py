@@ -12,6 +12,7 @@ def main():
     parser = create_argument_parser()
     args = parser.parse_args()
     configure_logger(args.log.upper(), "%(asctime)-15s %(levelname)-8s %(message)s")
+    args.parser = parser
     args.func(args)
 
 
@@ -51,6 +52,7 @@ def create_argument_parser():
     train.add_argument("--validation-interval", type=positive_integer, default=1000,
                        help="how often to run the validation set")
     train.add_argument("--model-directory", type=new_directory, help="directory to which to write the model")
+    train.add_argument("--model-intervals", type=positive_integer, help="how often to save the model")
     train.add_argument("--summary-directory", type=new_directory,
                        help="directory to which to write a training summary")
     train.add_argument("--time-steps", type=positive_integer, default=20, help="training unrolled time steps")
