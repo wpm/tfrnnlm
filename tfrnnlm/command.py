@@ -4,8 +4,7 @@ from datetime import timedelta
 import tensorflow as tf
 from tfrnnlm import logger
 from tfrnnlm.rnn import RNN, Parameters, ExitCriteria, Validation, Directories
-from tfrnnlm.text import PartitionedData, Vocabulary, WordTokenizer, CharacterTokenizer, WhitespaceTokenizer, \
-    DocumentSet
+from tfrnnlm.text import PartitionedData, Vocabulary, WordTokenizer, CharacterTokenizer, WhitespaceTokenizer
 
 
 def create_data_set(args):
@@ -63,7 +62,7 @@ def train_model(args):
 
 
 def test_model(args):
-    test_set = DocumentSet(args.test_set)
+    test_set = args.data_set[args.test_partition]
     logger.info("Test set: %s" % test_set)
     with tf.Graph().as_default():
         with tf.Session() as session:
